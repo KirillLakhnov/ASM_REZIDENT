@@ -69,37 +69,48 @@ PRINT_DECOR  macro
 ;===========================================
 
 
-Start: sti
-       xor bx, bx
-       mov es, bx
-       mov bx, 4*8    
-       mov ax, es:[bx]
-       mov old08ofs, ax    
-       mov es:[bx], offset new_08      
-       mov ax, es:[bx + 2]
-       mov old08seg, ax   
-       mov ax, cs
-       mov es:[bx + 2], ax
-       cli
+Start: 	sti
+       	xor bx, bx
+       	mov es, bx
+       	mov bx, 4*8    
+       	mov ax, es:[bx]
+       	mov old08ofs, ax    
+       	mov es:[bx], offset new_08      
+       	mov ax, es:[bx + 2]
+       	mov old08seg, ax   
+       	mov ax, cs
+       	mov es:[bx + 2], ax
+       	cli
+
+       	cli
+       	xor bx, bx
+       	mov es, bx
+       	mov bx, 4*9
+       	mov ax, es:[bx]
+       	mov old09ofs, ax
+       	mov es:[bx], offset new_09
+       	mov ax, es:[bx + 2]
+       	mov old09seg, ax
+       	mov ax, cs
+       	mov es:[bx + 2], ax
+       	sti
+
+		;mov cx, offset registr_buffer
+		;mov cx, offset old_screen_buffer
+		;mov cx, offset mode
+
+		;mov cl, 0dh
+		;int 9h
+		;int 8h
+		;mov cl, 21h
+		;int 9h
+		;int 8h
+
+       	mov ah, 09h
+	    mov dx, offset rezident_active
+	    int 21h
        
-       cli
-       xor bx, bx
-       mov es, bx
-       mov bx, 4*9
-       mov ax, es:[bx]
-       mov old09ofs, ax
-       mov es:[bx], offset new_09
-       mov ax, es:[bx + 2]
-       mov old09seg, ax
-       mov ax, cs
-       mov es:[bx + 2], ax
-       sti 
-       
-       next: in  al, 60h
-             cmp al, 1
-             jne next
-       
-       EXIT
+       	EXIT
 
 ;===========================================
 ; Print vertical line to "registr_buffer"
@@ -181,34 +192,30 @@ include tests.asm
 ; Destroys:  None
 ;===========================================  
 new_09             	proc
-                   	push ax bx cx dx
-                   	push si di
-                   	push bp sp
-                   	push ds es ss cs
+					push es ds
+                   	push ax	
 
-                    $$view: in  al, 60h
-                           	cmp al, 0dh ; al equaly scan code "+="
-                           	je  $$print_value_registrs
-                           	jmp $$sleep_view 
+                    $$view: 		;mov al, cl
+									in  al, 60h
+                           			cmp al, 0dh 		; al equaly scan code "+="
+                           			je  $$pressed		;
+                           			jmp $$sleep_view 	;
 				
-                    $$print_value_registrs: mov al, mode
-											cmp al, 00h
-											je  $$on_registrs
-											cmp al, 01h
-											je $$off_registrs
-				   
-				   	$$on_registrs:			mov mode, 01h
-											call old_video_to_buffer 
-											call registrs_to_buffer
-                                           	lea bx, registr_buffer
-										   	call printf_video_buffer
-                                           	jmp  $$end_view
-
-					$$off_registrs:        	mov mode, 00h
-											lea bx, old_screen_buffer
-											call printf_video_buffer
-											jmp  $$end_view
-                                           
+                    $$pressed: 		mov al, cs:[mode]	 
+									cmp al, 00h				 
+									je  $$on_view			 
+									cmp al, 01h				 
+									je  $$off_view			 
+															 
+				   	$$on_view:		mov cs:[mode],      01h	;-->; if  (mode == 0) then (mode = 1)
+									mov cs:[sleep_prg], 01h ;-->; and (sleep_prg = 1)
+									mov cs:[flaunch],   01h ;-->; and (flaunch   = 1)  
+                                    jmp $$end_view			 
+															 
+					$$off_view:		mov cs:[mode],   00h ;-->; if (mode == 1) then (mode = 0)
+									mov cs:[launch], 00h ;-->; and (launch = 0)  
+									jmp $$end_view		 
+	
                    	$$end_view:
                    
                    	in  al, 61h
@@ -219,26 +226,17 @@ new_09             	proc
       
                    	mov al, 20h
                    	out 20h, al
-              
-                   	add sp, 2
                    
-                   	pop ss es ds
-                   	pop sp bp
-                   	pop di si
-                   	pop dx cx bx ax
-                   
+                   	pop ax
+                    pop ds es
                    	iret
        
-$$sleep_view:      	add sp, 2
+$$sleep_view:      	pop ax
+					pop ds es
 
-                   	pop ss es ds
-                   	pop sp bp
-                   	pop di si
-                   	pop dx cx bx ax
-
-                             db 0eah
-                   	old09ofs dw 0
-                   	old09seg dw 0
+                    db 0eah
+           old09ofs dw 0
+           old09seg dw 0
 
 new_09           	endp
 ;=========================================== 
@@ -252,31 +250,81 @@ new_09           	endp
 ; Expects:   None
 ; Destroys:  None
 ;===========================================  
-new_08 				proc
-					push ax bx cx dx
-                   	push si di
-                   	push bp sp
-                   	push ds es ss 
+new_08 			proc 
+				pushf     ; push flags
+				db 09ah   ; call far
+       old08ofs dw 0
+       old08seg dw 0
 
-					mov al, mode
-					cmp al, 01h
-					je  $$update_registrs
-					jmp $$off_update
+	   			push ax bx cx dx
+                push si di
+                push bp sp
+                push ds es ss cs
 
-					pop ss es ds
-                   	pop sp bp
-                   	pop di si
-                   	pop dx cx bx ax
+				mov al, cs:[mode]
+				cmp al, 01h
+				je  $$update_registers
+				jmp $$sleep_update
+
+				;==============================================
+				$$update_registers:	mov al, cs:[launch]
+									cmp al, 00h 
+									je  $$save_old_video
+									jmp $$draw_registers
+									 
+				$$draw_registers:	lea  bx, cs:[registr_buffer]
+									lea  di, cs:[old_screen_buffer]
+									call cmp_buffer
+									call registrs_to_buffer
+                                    lea  bx, cs:[registr_buffer]
+									call printf_video_buffer
+									jmp  $$end_time
+
+				$$save_old_video:   mov ah, 09h
+	    							mov dx, offset cs:[help1]
+	    							int 21h
+									lea bx, cs:[old_screen_buffer]
+									call old_video_to_buffer
+									mov  cs:[launch], 01h
+									jmp  $$draw_registers
+				;==============================================
+				$$sleep_update: 	mov al, cs:[flaunch]
+									cmp al, 00h
+									je  $$end_time
+
+									mov al, cs:[sleep_prg]
+									cmp al, 00h
+									jne $$draw_old_video
+									jmp $$end_time
+
+				$$draw_old_video:	mov  cs:[sleep_prg], 00h        ;-->; if (sleep_prg == 0) then (sleep_prg = 1)
+									lea  bx, cs:[old_screen_buffer] 
+									call printf_video_buffer
+									jmp  $$end_time
+				;==============================================
+				$$end_time: 
+
+				add sp, 2
+
+				pop ss es ds
+                pop sp bp
+                pop di si
+                pop dx cx bx ax
                    
-                   	iret
-new_08 				endp
-;===========================================ё
-old09ofs dw 0
-old09seg dw 0
+                iret
+new_08 			endp
+;===========================================
+registr_buffer    dw 225 dup (0)
+old_screen_buffer dw 225 dup (0)
 
-registr_buffer    dw 224 dup (0)
-old_screen_buffer dw 224 dup (0)
+mode   		db 00h ; mode      == 0 --> draw registers off (pressed) 		; mode      == 1 --> draw registers on (pressed)         ;
+flaunch 	db 00h ; flaunch   == 0 --> there was no first launch    		; flaunch   == 1 --> there was first launch              ; 
+launch      db 00h ; launch    == 0 --> draw registers off                  ; launch    == 1 --> draw registers on					 ;
+sleep_prg	db 00h ; sleep_prg == 0 --> drawing in video memory is disabled ; sleep_prg == 1 --> draw registers was on 				 ;
 
-mode db 00h
+
+rezident_active db 29 dup (20h), 0C9h, 0CDh,     18 dup (0CDh),    0CDh, 0BBh, 0dh, 0ah
+             	db 29 dup (20h), 0BAh, 020h, "Resident activated", 020h, 0BAh, 0dh, 0ah
+	     		db 29 dup (20h), 0C8h, 0CDh,     18 dup (0CDh),    0CDh, 0BCh, '$'
 
 EOP: end Start

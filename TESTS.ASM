@@ -1,5 +1,43 @@
 ;===========================================
-; 
+; Put value registrs on buffer
+;===========================================
+; Entry:     AH = color
+;            CX = name registrs
+;            DX = shift relative to bp
+; Exit:      BX = BX + 16
+; Expects:   
+; Destroys:  
+;===========================================
+one_registr_to_buffer   proc
+                        push ax
+                        PRINT_DECOR
+              
+                        mov byte ptr registr_buffer + bx, ch
+                        add bx, 1
+                        mov byte ptr registr_buffer + bx, ah
+                        add bx, 1
+                        mov byte ptr registr_buffer + bx, cl 
+                        add bx, 1
+                        mov byte ptr registr_buffer + bx, ah
+                        add bx, 1
+              
+                        PRINT_EQUALS
+                        
+                        push bp
+                        add  bp, dx
+                        mov  ax, [bp] ; ax = value register
+                        pop  bp
+                        call HEX_print
+              
+                        PRINT_DECOR
+                        pop ax
+                        ret
+one_registr_to_buffer   endp
+;=========================================== 
+
+
+;===========================================
+; Put value registrs on buffer
 ;===========================================
 ; Entry:    
 ; Exit:      
@@ -25,174 +63,56 @@ registrs_to_buffer  proc
                     add bx, 2
                     mov registr_buffer + bx, 4e20h
                     add bx, 2
+
+                    mov ah, 4eh
                     ;=============================
-                    PRINT_DECOR
-              
-                    mov registr_buffer + bx, 4e41h  
-                    add bx, 2
-                    mov registr_buffer + bx, 4e58h
-                    add bx, 2
-              
-                    PRINT_EQUALS
-              
-                    mov ax, [bp + 26] ; ax = old ax
-                    call HEX_print
-              
-                    PRINT_DECOR
+                    mov cx, 4158h
+                    mov dx, 28
+                    call one_registr_to_buffer ; printf ax
                     ;=============================
-                    PRINT_DECOR
-              
-                    mov registr_buffer + bx, 4e42h   
-                    add bx, 2
-                    mov registr_buffer + bx, 4e58h
-                    add bx, 2
-              
-                    PRINT_EQUALS
-              
-                    mov ax, [bp + 24] ; ax = old bx
-                    call HEX_print
-              
-                    PRINT_DECOR
+                    mov cx, 4258h
+                    mov dx, 26
+                    call one_registr_to_buffer ; printf bx
                     ;=============================
-                    PRINT_DECOR
-              
-                    mov registr_buffer + bx, 4e43h   
-                    add bx, 2
-                    mov registr_buffer + bx, 4e58h
-                    add bx, 2
-              
-                    PRINT_EQUALS
-              
-                    mov ax, [bp + 22] ; ax = old cx
-                    call HEX_print
-              
-                    PRINT_DECOR
+                    mov cx, 4358h
+                    mov dx, 24
+                    call one_registr_to_buffer ; printf cx
                     ;=============================
-                    PRINT_DECOR
-              
-                    mov registr_buffer + bx, 4e44h   
-                    add bx, 2
-                    mov registr_buffer + bx, 4e58h
-                    add bx, 2
-              
-                    PRINT_EQUALS
-              
-                    mov ax, [bp + 20] ; ax = old dx
-                    call HEX_print
-              
-                    PRINT_DECOR
+                    mov cx, 4458h
+                    mov dx, 22
+                    call one_registr_to_buffer ; printf dx
                     ;=============================
-                    PRINT_DECOR
-              
-                    mov registr_buffer + bx, 4e53h   
-                    add bx, 2
-                    mov registr_buffer + bx, 4e49h
-                    add bx, 2
-              
-                    PRINT_EQUALS
-              
-                    mov ax, [bp + 18] ; ax = old si
-                    call HEX_print
-              
-                    PRINT_DECOR
+                    mov cx, 5349h
+                    mov dx, 20
+                    call one_registr_to_buffer ; printf si
                     ;=============================
-                    PRINT_DECOR
-              
-                    mov registr_buffer + bx, 4e44h   
-                    add bx, 2
-                    mov registr_buffer + bx, 4e49h
-                    add bx, 2
-              
-                    PRINT_EQUALS
-              
-                    mov ax, [bp + 16] ; ax = old di
-                    call HEX_print
-              
-                    PRINT_DECOR
+                    mov cx, 4449h
+                    mov dx, 18
+                    call one_registr_to_buffer ; printf di
                     ;=============================
-                    PRINT_DECOR
-              
-                    mov registr_buffer + bx, 4e42h   
-                    add bx, 2
-                    mov registr_buffer + bx, 4e50h
-                    add bx, 2
-              
-                    PRINT_EQUALS
-              
-                    mov ax, [bp + 14] ; ax = old bp
-                    call HEX_print
-              
-                    PRINT_DECOR
+                    mov cx, 4250h
+                    mov dx, 16
+                    call one_registr_to_buffer ; printf bp
                     ;=============================
-                    PRINT_DECOR
-              
-                    mov registr_buffer + bx, 4e53h   
-                    add bx, 2
-                    mov registr_buffer + bx, 4e50h
-                    add bx, 2
-              
-                    PRINT_EQUALS
-              
-                    mov ax, [bp + 12] ; ax = old sp
-                    call HEX_print
-              
-                    PRINT_DECOR
+                    mov cx, 5350h
+                    mov dx, 14
+                    call one_registr_to_buffer ; printf sp
                     ;=============================
-                    PRINT_DECOR
-              
-                    mov registr_buffer + bx, 4e44h   
-                    add bx, 2
-                    mov registr_buffer + bx, 4e53h
-                    add bx, 2
-              
-                    PRINT_EQUALS
-              
-                    mov ax, [bp + 10] ; ax = old ds
-                    call HEX_print
-              
-                    PRINT_DECOR
+                    mov cx, 4453h
+                    mov dx, 12
+                    call one_registr_to_buffer ; printf ds
                     ;=============================
-                    PRINT_DECOR
-              
-                    mov registr_buffer + bx, 4e45h   
-                    add bx, 2
-                    mov registr_buffer + bx, 4e53h
-                    add bx, 2
-              
-                    PRINT_EQUALS
-              
-                    mov ax, [bp + 8] ; ax = old es
-                    call HEX_print
-              
-                    PRINT_DECOR
+                    mov cx, 4553h
+                    mov dx, 10
+                    call one_registr_to_buffer ; printf es
                     ;=============================
-                    PRINT_DECOR
-              
-                    mov registr_buffer + bx, 4e53h   
-                    add bx, 2
-                    mov registr_buffer + bx, 4e53h
-                    add bx, 2
-              
-                    PRINT_EQUALS
-              
-                    mov ax, [bp + 6] ; ax = old ss
-                    call HEX_print
-              
-                    PRINT_DECOR
+                    mov cx, 5353h
+                    mov dx, 8
+                    call one_registr_to_buffer ; printf ss
                     ;=============================
-                    PRINT_DECOR
-              
-                    mov registr_buffer + bx, 4e43h   
-                    add bx, 2
-                    mov registr_buffer + bx, 4e53h
-                    add bx, 2
-              
-                    PRINT_EQUALS
-              
-                    mov ax, [bp + 4] ; ax = old cs
-                    call HEX_print
-              
-                    PRINT_DECOR
+                    mov cx, 4353h
+                    mov dx, 6
+                    call one_registr_to_buffer ; printf cs
                     ;=============================
               
                     mov registr_buffer + bx, 4e20h
@@ -217,32 +137,34 @@ registrs_to_buffer  endp
 ;===========================================
 ; SCANF OLD VIDEO BUFFER 
 ;===========================================
-; Entry:    
-; Exit:      
-; Expects:   
-; Destroys:  
+; Entry:    BX = pointer to buffer
+; Exit:     None
+; Expects:  None
+; Destroys: AX, BX, DX, SI, DI, ES
 ;=========================================== 
 old_video_to_buffer proc
+                    push bx
                     mov bx, 0b800h
                     mov es, bx
+                    pop bx
                     
-                    mov bx, 0
                     mov si, 0
                     
                     mov cx, 14
-                    $$all_video_record: mov di, 16
-                                        $$string_video_record:  mov ax, es:[si]
-                                                                mov old_screen_buffer + bx, ax
+                    $$all_video_record: mov dx, 16
+                                        $$string_video_record:  mov  ax,  es:[si]
+                                                                mov [bx], ax
+
                                                                 xor ax, ax
                                                                 add bx, 2
                                                                 add si, 2
 
-                                                                dec di
-                                                                cmp di, 0
+                                                                dec dx
+                                                                cmp dx, 0
                                                                 jne $$string_video_record
                                         add  si, 128
                                         loop $$all_video_record
-                    
+            
                     ret
 old_video_to_buffer endp
 ;=========================================== 
@@ -252,13 +174,11 @@ old_video_to_buffer endp
 ; PRINTF VIDEO BUFFER 
 ;===========================================
 ; Entry:    BX = pointer to buffer
-; Exit:      
-; Expects:   
-; Destroys:  
+; Exit:     None
+; Expects:  None
+; Destroys: BX, CX, DX, SI
 ;=========================================== 
 printf_video_buffer proc
-                    push si cx di 
-
                     push bx
                     mov bx, 0b800h
                     mov es, bx
@@ -266,7 +186,7 @@ printf_video_buffer proc
 
                     mov si, 0
                     mov cx, 14
-                    $$all_printf_video: mov di, 16
+                    $$all_printf_video: mov dx, 16
                                         $$string_printf_video:  push bx
                                                                 mov  bx,[bx]
                                                                 mov  es:[si], bx
@@ -275,12 +195,50 @@ printf_video_buffer proc
                                                                 add  bx, 2
                                                                 add  si, 2
 
-                                                                dec  di
-                                                                cmp  di, 0
+                                                                dec  dx
+                                                                cmp  dx, 0
                                                                 jne $$string_printf_video
                                         add si, 128
                                         loop $$all_printf_video
-                    pop di cx si
                     ret
 printf_video_buffer endp
 ;=========================================== 
+
+;===========================================
+; CMP BUFFER AND VIDEO AND UPDATE
+;===========================================
+; Entry:    BX = pointer to buffer for cmp
+;           DI = pointer to buffer for write
+; Exit:     None
+; Expects:  None
+; Destroys: AX, BX, DX, SI, DI, ES
+;=========================================== 
+cmp_buffer  proc
+            push bx
+            mov  bx, 0b800h
+            mov  es, bx
+            pop  bx
+
+            mov si, 0
+            mov cx, 14
+            $$all_cmp:  mov dx, 16
+                        $$string_cmp:   mov ax, es:[si]
+                                        cmp ax, [bx]
+                                        jne $$change
+                                        jmp $$not_change
+
+                        $$change:       mov [di], ax
+
+                        $$not_change:   add di, 2
+                                        add bx, 2
+                                        add si, 2
+
+                                        xor ax, ax
+                                        dec dx
+                                        cmp dx, 0
+                                        jne $$string_cmp
+                        add si, 128
+                        loop $$all_cmp
+            ret
+cmp_buffer  endp
+;===========================================
