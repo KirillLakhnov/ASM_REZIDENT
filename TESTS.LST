@@ -1,0 +1,686 @@
+Turbo Assembler	 Version 4.1	    03/13/23 14:25:10	    Page 1
+tests.asm
+
+
+
+      1				     .286
+      2	0000			     .model tiny
+      3	0000			     .code
+      4				     locals
+      5				     org 100h
+      6
+      7
+      8	0100			     Start:
+      9	0100  E9 0427		     jmp init_handler
+     10
+     11				     CONVERT	     macro res
+     12						     mov ax, res
+     13						     call convert_hex		     ; update image
+     14						     add di, columns
+     15				     endm
+     16
+     17
+     18				     ;------------------------------------------------
+     19				     ; Convert ax into hex and write to	buffer
+     20				     ;------------------------------------------------
+     21				     ; Enters:	     di	= buffer
+     22				     ; Expects:	     hex = '0123456789abcdf'
+     23				     ; Destroys:     (none)
+     24				     ;------------------------------------------------
+     25	0103			     convert_hex     proc
+     26	0103  50 53 51 52 57 56	1E+		     push ax bx	cx dx di si ds es
+     27	      06
+     28
+     29	010B  0E				     push cs
+     30	010C  0E				     push cs
+     31	010D  1F				     pop ds
+     32	010E  07				     pop es
+     33
+     34
+     35	010F  33 D2				     xor dx, dx
+     36	0111  33 DB				     xor bx, bx
+     37	0113			     @@convert:
+     38	0113  B9 0004				     mov cx, 4d
+     39	0116			     hex_loop:
+     40	0116  42				     inc dx
+     41	0117  D1 E3				     shl bx, 1
+     42	0119  D1 E0				     shl ax, 1
+     43	011B  73 03				     jnc add0
+     44	011D  83 C3 01				     add bx, 1
+     45	0120			     add0:
+     46	0120  E2 F4				     loop hex_loop
+     47
+     48	0122  BE 051Ar				     mov si, offset hex
+     49	0125  03 F3				     add si, bx
+     50	0127  A4				     movsb
+     51	0128  26: C6 05	A2			     mov byte ptr es:[di], green
+     52	012C  47				     inc di
+     53	012D  33 DB				     xor bx, bx
+     54	012F  83 FA 10				     cmp dx, 16
+     55	0132  75 DF				     jne @@convert
+     56
+     57	0134  07				     pop es
+Turbo Assembler	 Version 4.1	    03/13/23 14:25:10	    Page 2
+tests.asm
+
+
+
+     58	0135  1F				     pop ds
+     59	0136  5E				     pop si
+     60	0137  5F				     pop di
+     61	0138  5A				     pop dx
+     62	0139  59				     pop cx
+     63	013A  5B				     pop bx
+     64	013B  58				     pop ax
+     65	013C  C3				     ret
+     66	013D			     endp
+     67				     ;------------------------------------------------
+     68
+     69
+     70				     ;------------------------------------------------
+     71				     ; Compare video and image buffers.	If video
+     72				     ; buffer has changed, write changes to saved
+     73				     ;------------------------------------------------
+     74				     ; Enters:	     si	= image	buffer
+     75				     ;		     bx	= coordinates in videomem
+     76				     ; Expects:	     saved_buffer
+     77				     ; Destroys:     (none)
+     78				     ;------------------------------------------------
+     79	013D			     cmp_buffers     proc
+     80	013D  50 53 51 57			     push ax bx	cx di
+     81
+     82				     ;		     convert coordinates to adress
+     83	0141  33 C9				     xor cx, cx
+     84	0143  D1 E3				     shl bx, 1
+     85	0145  8A CF				     mov cl, bh
+     86
+     87	0147  8B F9				     mov di, cx		     ;di += bh*2
+     88	0149  8A CB				     mov cl, bl
+     89	014B  C1 E1 04				     shl cx, 4
+     90	014E  03 F9				     add di, cx
+     91	0150  C1 E1 02				     shl cx, 2
+     92	0153  03 F9				     add di, cx
+     93
+     94
+     95	0155  BA 0012 90			     mov dx, columns
+     96	0159  B9 007E				     mov cx, columns*lines/2
+     97	015C  33 DB				     xor bx, bx
+     98	015E  33 C0				     xor ax, ax
+     99	0160			     @@compare:
+    100	0160  2E: 8B 00				     mov ax, cs:[si + bx]		     ; ax = image[si]
+    101	0163  26: 3B 01				     cmp ax, es:[di + bx]		     ; if ax ==	video[si]
+    102	0166  74 08				     je	@@end_update			     ; update saved
+    103	0168  26: 8B 01				     mov ax, es:[di + bx]
+    104	016B  2E: 89 87	041Br			     mov cs:[saved_buffer + bx], ax
+    105	0170			     @@end_update:
+    106
+    107	0170  83 C3 02				     add bx, 02h
+    108
+    109	0173  3B DA				     cmp bx, dx				     ; if bx > buffer lenght
+    110	0175  75 0C				     jne @@end_newline			     ; di += new_line adress
+    111	0177  83 C2 12 90			     add dx, columns
+    112	017B  81 C7 00A0			     add di, 80*2
+    113	017F  83 EF 12 90			     sub di, columns
+    114	0183			     @@end_newline:
+Turbo Assembler	 Version 4.1	    03/13/23 14:25:10	    Page 3
+tests.asm
+
+
+
+    115	0183  E2 DB				     loop @@compare
+    116
+    117	0185  5F 59 5B 58			     pop di cx bx ax
+    118	0189  C3				     ret
+    119	018A					     endp
+    120				     ;------------------------------------------------
+    121
+    122
+    123				     ;------------------------------------------------
+    124				     ; Copy buffer from	image to videomemory
+    125				     ;-----------------------------------------------
+    126				     ; Enters:	     bx	= coordinates in videomem
+    127				     ;		     si	= buffer to show
+    128				     ;		     fix size lines*columns
+    129				     ; Expects:	     (none)
+    130				     ; Destroys:     (none)
+    131				     ;------------------------------------------------
+    132	018A			     show_buffer     proc
+    133	018A  53 51 06 57 1E			     push bx cx	es di ds
+    134
+    135	018F  33 C9				     xor cx, cx
+    136	0191  D1 E3				     shl bx, 1
+    137	0193  8A CF				     mov cl, bh
+    138
+    139	0195  8B F9				     mov di, cx		     ;di += ah*2
+    140	0197  8A CB				     mov cl, bl
+    141	0199  C1 E1 04				     shl cx, 4
+    142	019C  03 F9				     add di, cx
+    143	019E  C1 E1 02				     shl cx, 2
+    144	01A1  03 F9				     add di, cx
+    145
+    146	01A3  0E				     push cs
+    147	01A4  1F				     pop ds
+    148
+    149	01A5  BB B800				     mov bx, 0b800h
+    150	01A8  8E C3				     mov es, bx
+    151
+    152	01AA  B9 000E 90			     mov cx, lines
+    153	01AE			     @@columns:
+    154	01AE  51				     push cx
+    155	01AF  57				     push di
+    156	01B0  B9 0012 90			     mov cx, columns			 ; old:	mov cx 08h movsw
+    157	01B4  F3> A4				     rep movsb
+    158	01B6  5F				     pop di
+    159	01B7  81 C7 00A0			     add di, 80*2		     ; new line
+    160	01BB  59				     pop cx
+    161	01BC  E2 F0				     loop @@columns
+    162	01BE  1F 5F 07 59 5B			     pop ds di es cx bx
+    163	01C3  C3				     ret
+    164	01C4					     endp
+    165
+    166
+    167				     ;------------------------------------------------
+    168
+    169
+    170				     ; compare buffers ( video and image)
+    171				     ; write to	saved, if video	has changed
+Turbo Assembler	 Version 4.1	    03/13/23 14:25:10	    Page 4
+tests.asm
+
+
+
+    172				     ; update image
+    173				     ; show image
+    174				     ; in cleaner show saved
+    175				     ; end
+    176				     ;------------------------------------------------
+    177	01C4			     New08	     proc
+    178	01C4  2E: 89 1E	030Dr			     mov cs:[bx_save], bx
+    179	01C9  2E: 89 36	030Fr			     mov cs:[si_save], si
+    180	01CE  2E: 89 3E	0311r			     mov cs:[di_save], di
+    181	01D3  2E: 89 2E	0313r			     mov cs:[bp_save], bp
+    182	01D8  2E: 89 26	0315r			     mov cs:[sp_save], sp
+    183	01DD  2E: 8C 1E	0317r			     mov cs:[ds_save], ds
+    184	01E2  2E: 8C 06	0319r			     mov cs:[es_save], es
+    185	01E7  2E: 8C 16	031Br			     mov cs:[ss_save], ss
+    186	01EC  2E: 8C 0E	031Dr			     mov cs:[cs_save], cs
+    187
+    188	01F1  9C				     pushf			     ; save flags
+    189	01F2  9A				     db	09ah			     ; call far
+    190	01F3  0000		     Old08Ofs	     dw	0
+    191	01F5  0000		     Old08Seg	     dw	0
+    192	01F7  50 53 06				     push ax bx	es
+    193
+    194	01FA  BB B800				     mov bx, 0b800h
+    195	01FD  8E C3				     mov es, bx
+    196	01FF  2E: 8B 1E	0517r			     mov bx, cs:[video_adress]
+    197
+    198	0204  2E: 80 3E	0519r 03		     cmp cs:[delay], 3d
+    199	020A  74 03				     je	far_sleep
+    200	020C  E9 00B1				     jmp sleep
+    201	020F			     far_sleep:
+    202	020F  2E: 80 3E	030Cr 01		     cmp cs:[mode], 01h		     ; show mode
+    203	0215  74 0E				     je	update
+    204	0217  2E: 80 3E	030Cr 02		     cmp cs:[mode], 02h		     ; dont update
+    205	021D  75 03				     jne far_clean
+    206	021F  E9 0091				     jmp clean
+    207	0222			     far_clean:
+    208	0222  E9 009B				     jmp sleep
+    209	0225			     update:
+    210	0225  BE 031Fr				     lea si, cs:[image_buffer]
+    211	0228  E8 FF12				     call cmp_buffers
+    212
+    213	022B  BF 0339r				     lea di, cs:[image_buffer+26]
+    214	022E  E8 FED2				     call convert_hex		     ; update image
+    215	0231  83 C7 12 90			     add di, columns
+    216
+    217						     CONVERT cs:[bx_save]
+1   218	0235  2E: A1 030Dr			     mov ax, cs:[bx_save]
+1   219	0239  E8 FEC7				     call convert_hex		     ; update image
+1   220	023C  83 C7 12 90			     add di, columns
+    221						     CONVERT cx
+1   222	0240  8B C1				     mov ax, cx
+1   223	0242  E8 FEBE				     call convert_hex		     ; update image
+1   224	0245  83 C7 12 90			     add di, columns
+    225						     CONVERT dx
+1   226	0249  8B C2				     mov ax, dx
+1   227	024B  E8 FEB5				     call convert_hex		     ; update image
+1   228	024E  83 C7 12 90			     add di, columns
+Turbo Assembler	 Version 4.1	    03/13/23 14:25:10	    Page 5
+tests.asm
+
+
+
+    229						     CONVERT cs:[si_save]
+1   230	0252  2E: A1 030Fr			     mov ax, cs:[si_save]
+1   231	0256  E8 FEAA				     call convert_hex		     ; update image
+1   232	0259  83 C7 12 90			     add di, columns
+    233						     CONVERT cs:[di_save]
+1   234	025D  2E: A1 0311r			     mov ax, cs:[di_save]
+1   235	0261  E8 FE9F				     call convert_hex		     ; update image
+1   236	0264  83 C7 12 90			     add di, columns
+    237						     CONVERT cs:[bp_save]
+1   238	0268  2E: A1 0313r			     mov ax, cs:[bp_save]
+1   239	026C  E8 FE94				     call convert_hex		     ; update image
+1   240	026F  83 C7 12 90			     add di, columns
+    241						     CONVERT cs:[sp_save]
+1   242	0273  2E: A1 0315r			     mov ax, cs:[sp_save]
+1   243	0277  E8 FE89				     call convert_hex		     ; update image
+1   244	027A  83 C7 12 90			     add di, columns
+    245						     CONVERT cs:[ds_save]
+1   246	027E  2E: A1 0317r			     mov ax, cs:[ds_save]
+1   247	0282  E8 FE7E				     call convert_hex		     ; update image
+1   248	0285  83 C7 12 90			     add di, columns
+    249						     CONVERT cs:[es_save]
+1   250	0289  2E: A1 0319r			     mov ax, cs:[es_save]
+1   251	028D  E8 FE73				     call convert_hex		     ; update image
+1   252	0290  83 C7 12 90			     add di, columns
+    253						     CONVERT cs:[ss_save]
+1   254	0294  2E: A1 031Br			     mov ax, cs:[ss_save]
+1   255	0298  E8 FE68				     call convert_hex		     ; update image
+1   256	029B  83 C7 12 90			     add di, columns
+    257						     CONVERT cs:[cs_save]
+1   258	029F  2E: A1 031Dr			     mov ax, cs:[cs_save]
+1   259	02A3  E8 FE5D				     call convert_hex		     ; update image
+1   260	02A6  83 C7 12 90			     add di, columns
+    261	02AA  BE 031Fr				     lea si, cs:[image_buffer]
+    262	02AD  E8 FEDA				     call show_buffer
+    263	02B0  EB 0E 90				     jmp sleep
+    264	02B3			     clean:
+    265	02B3  BE 041Br				     lea si, cs:[saved_buffer]
+    266	02B6  E8 FED1				     call show_buffer
+    267	02B9  2E: C6 06	030Cr 00  +		     mov cs:[mode], 00h
+    268	      90
+    269	02C0			     sleep:
+    270	02C0  2E: FE 06	0519r			     inc cs:[delay]
+    271	02C5  2E: 80 3E	0519r 04		     cmp cs:[delay], 04h
+    272	02CB  75 07				     jne not_reset
+    273	02CD  2E: C6 06	0519r 00  +		     mov cs:[delay], 00h
+    274	      90
+    275	02D4			     not_reset:
+    276	02D4  07 5B 58				     pop es bx ax
+    277
+    278	02D7  CF				     iret
+    279	02D8					     endp
+    280				     ;------------------------------------------------
+    281
+    282				     ;------------------------------------------------
+    283				     ; Keyboard	handler
+    284				     ;------------------------------------------------
+    285	02D8			     New09	     proc
+Turbo Assembler	 Version 4.1	    03/13/23 14:25:10	    Page 6
+tests.asm
+
+
+
+    286	02D8  50				     push ax
+    287	02D9  E4 60				     in	al, 60h
+    288	02DB  3C 0D				     cmp al, 0Dh
+    289	02DD  74 03				     je	@@pressed
+    290	02DF  EB 17 90				     jmp @@sleep
+    291	02E2			     @@pressed:
+    292	02E2  2E: 80 06	030Cr 01		     add cs:[mode], 01h
+    293
+    294	02E8  E4 61				     in	al, 61h
+    295	02EA  0C 80				     or	al, 80h
+    296	02EC  E6 61				     out 61h, al
+    297	02EE  24 7F				     and al, not 80h
+    298	02F0  E6 61				     out 61h, al
+    299
+    300	02F2  B0 20				     mov al, 20h
+    301	02F4  E6 20				     out 20h, al
+    302
+    303	02F6  58				     pop ax
+    304	02F7  CF				     iret
+    305	02F8			     @@sleep:
+    306	02F8  58				     pop ax
+    307	02F9  EA				     db	0eah			     ; jmp far
+    308	02FA  0000		     Old09Ofs	     dw	0h
+    309	02FC  0000		     Old09Seg	     dw	0h
+    310
+    311	02FE					     endp
+    312				     ;------------------------------------------------
+    313
+    314
+    315				     ;------------------------------------------------
+    316				     ; Old multiplex handler
+    317				     ;------------------------------------------------
+    318	02FE			     New02	     proc
+    319
+    320	02FE  3D FF00				     cmp ax, 0ff00h
+    321	0301  75 04				     jne @@already_inst
+    322	0303  B8 00FF				     mov ax, 00ffh
+    323	0306  CF				     iret
+    324	0307			     @@already_inst:
+    325	0307  EA				     db	0eah			     ; jmp far
+    326	0308  0000		     Old02Ofs	     dw	0h
+    327	030A  0000		     Old02Seg	     dw	0h
+    328	030C					     endp
+    329				     ;------------------------------------------------
+    330
+    331				     ;================================================
+    332				     ; Resident	data
+    333	      =000E		     lines	     equ 14
+    334	      =0012		     columns	     equ 18
+    335	      =00A2		     green	     equ 0A2h
+    336
+    337	030C  00		     mode	     db	00h
+    338	030D  BEDA		     bx_save	     dw	0BEDAh
+    339	030F  BEDA		     si_save	     dw	0BEDAh
+    340	0311  BEDA		     di_save	     dw	0BEDAh
+    341	0313  BEDA		     bp_save	     dw	0BEDAh
+    342	0315  BEDA		     sp_save	     dw	0BEDAh
+Turbo Assembler	 Version 4.1	    03/13/23 14:25:10	    Page 7
+tests.asm
+
+
+
+    343	0317  BEDA		     ds_save	     dw	0BEDAh
+    344	0319  BEDA		     es_save	     dw	0BEDAh
+    345	031B  BEDA		     ss_save	     dw	0BEDAh
+    346	031D  BEDA		     cs_save	     dw	0BEDAh
+    347	031F  7E*(0020)		     image_buffer    dw	columns*lines/2	dup (0020h)
+    348	041B  7E*(4050)		     saved_buffer    dw	lines*(2+1+4+2)	dup (4050h)
+    349	0517  4001		     video_adress    dw	4001h
+    350	0519  00		     delay	     db	00h
+    351	051A  30 31 32 33 34 35	36+  hex	     db	'0123456789ABCDEF'
+    352	      37 38 39 41 42 43	44+
+    353	      45 46
+    354	052A			     resident_end:
+    355
+    356				     ;================================================
+    357
+    358	052A			     init_handler:
+    359	052A  B8 1003				     mov ax, 1003h
+    360	052D  BB 0000				     mov bx, 0h
+    361	0530  CD 10				     int 10h
+    362	0532  8B 1E 0517r			     mov bx, [video_adress]
+    363	0536  B6 0E				     mov dh, lines
+    364	0538  B2 09				     mov dl, columns/2
+    365	053A  BE 0655r				     lea si, [frame_styles]
+    366	053D  BF 031Fr				     lea di, [image_buffer]
+    367	0540  B4 A2				     mov ah, green
+    368	0542  1E				     push ds
+    369	0543  07				     pop es
+    370	0544  E8 00A9				     call draw_frame
+    371
+    372	0547  B4 A2				     mov ah, green
+    373	0549  BE 061Fr				     lea si, [signatures]
+    374	054C  BF 0333r				     lea di, [image_buffer+columns+2]
+    375	054F  B6 0C				     mov dh, lines-2
+    376	0551  B2 02				     mov dl, 02h
+    377	0553  E8 0085				     call add_signatures
+    378
+    379
+    380	0556  B8 FF00				     mov ax, 0ff00h
+    381	0559  CD 2F				     int 02fh
+    382	055B  3D 00FF				     cmp ax, 00ffh
+    383	055E  75 0C				     jne not_installed
+    384	0560  B4 09				     mov ah, 09h
+    385	0562  BA 0637r				     lea dx, [warning]
+    386	0565  CD 21				     int 21h
+    387	0567  B8 4C00				     mov ax, 4C00h
+    388	056A  CD 21				     int 21h
+    389	056C			     not_installed:
+    390
+    391	056C  33 DB				     xor bx, bx
+    392	056E  8E C3				     mov es, bx
+    393	0570  BB 00BC				     mov bx, 2fh*4
+    394	0573  26: 8B 07				     mov ax, es:[bx]
+    395	0576  A3 0308r				     mov [Old02Ofs], ax
+    396	0579  26: 8B 47	02			     mov ax, es:[bx+02]
+    397	057D  A3 030Ar				     mov [Old02Seg], ax
+    398	0580  FA				     cli
+    399	0581  26: C7 07	02FEr			     mov es:[bx], offset New02
+Turbo Assembler	 Version 4.1	    03/13/23 14:25:10	    Page 8
+tests.asm
+
+
+
+    400	0586  8C C8				     mov ax, cs
+    401	0588  26: 89 47	02			     mov es:[bx+02], ax
+    402	058C  FB				     sti
+    403
+    404
+    405	058D  33 DB				     xor bx, bx			     ; handle timer interrupt
+    406	058F  8E C3				     mov es, bx
+    407	0591  BB 0020				     mov bx, 8*4
+    408	0594  26: 8B 07				     mov ax, es:[bx]
+    409	0597  A3 01F3r				     mov [Old08Ofs], ax
+    410	059A  26: 8B 47	02			     mov ax, es:[bx+02]
+    411	059E  A3 01F5r				     mov [Old08Seg], ax
+    412	05A1  FA				     cli
+    413	05A2  26: C7 07	01C4r			     mov es:[bx], offset New08
+    414	05A7  8C C8				     mov ax, cs
+    415	05A9  26: 89 47	02			     mov es:[bx+02], ax
+    416	05AD  FB				     sti
+    417
+    418
+    419	05AE  33 DB				     xor bx, bx			     ; handle keyboard interrupt
+    420	05B0  8E C3				     mov es, bx
+    421	05B2  BB 0024				     mov bx, 9*4
+    422	05B5  26: 8B 07				     mov ax, es:[bx]
+    423	05B8  A3 02FAr				     mov [Old09Ofs], ax
+    424	05BB  26: 8B 47	02			     mov ax, es:[bx+02]
+    425	05BF  A3 02FCr				     mov [Old09Seg], ax
+    426	05C2  FA				     cli
+    427	05C3  26: C7 07	02D8r			     mov es:[bx], offset New09
+    428	05C8  8C C8				     mov ax, cs
+    429	05CA  26: 89 47	02			     mov es:[bx+02], ax
+    430	05CE  FB				     sti
+    431	05CF  B8 3100				     mov ax, 3100h
+    432	05D2  BA 052Ar				     lea dx, resident_end
+    433	05D5  C1 EA 04				     shr dx, 4
+    434	05D8  42				     inc dx
+    435	05D9  CD 21				     int 21h
+    436
+    437				     ;------------------------------------------------
+    438				     ; Adds register names in image buffer
+    439				     ;------------------------------------------------
+    440	05DB			     add_signatures  proc
+    441	05DB  33 C9				     xor cx, cx
+    442	05DD			     @@next:
+    443	05DD  8A CA				     mov cl, dl
+    444	05DF  57				     push di
+    445	05E0			     @@line:
+    446	05E0  AC				     lodsb
+    447	05E1  AB				     stosw
+    448	05E2  E2 FC				     loop @@line
+    449	05E4  5F				     pop di
+    450	05E5  83 C7 12				     add di, columns
+    451	05E8  FE CE				     dec dh
+    452	05EA  80 FE 00				     cmp dh, 0
+    453	05ED  75 EE				     jne @@next
+    454	05EF  C3				     ret
+    455	05F0					     endp
+    456				     ;------------------------------------------------
+Turbo Assembler	 Version 4.1	    03/13/23 14:25:10	    Page 9
+tests.asm
+
+
+
+    457
+    458
+    459				     ;------------------------------------------------
+    460				     ; Draw frame in videomemory
+    461				     ;------------------------------------------------
+    462				     ; Expects:	     frame_styles
+    463				     ; Enter:	     dh	= frame	height
+    464				     ;		     dl	= frame	length
+    465				     ;		     bh	= left top x coordinate
+    466				     ;		     bl	= left top y coordinate
+    467				     ;		     al	= frame	color
+    468				     ; Returns:	     (none)
+    469				     ; Destroys:     cx, si
+    470				     ;-----------------------------------------------
+    471	05F0			     draw_frame	     proc
+    472	05F0  53				     push bx
+    473	05F1  52				     push dx
+    474
+    475	05F2  80 EA 02				     sub dl, 2
+    476	05F5  80 EE 02				     sub dh, 2
+    477
+    478	05F8  33 C9				     xor cx, cx
+    479	05FA  8A CA				     mov cl, dl
+    480
+    481	05FC  E8 0016				     call draw_string
+    482	05FF			     @@next:
+    483	05FF  E8 0013				     call draw_string
+    484	0602  83 EE 03				     sub si, 3
+    485	0605  FE CE				     dec dh
+    486	0607  80 FE 00				     cmp dh, 0
+    487	060A  75 F3				     jne @@next
+    488	060C  83 C6 03				     add si, 3
+    489	060F  E8 0003				     call draw_string
+    490	0612  5A				     pop dx
+    491	0613  5B				     pop bx
+    492	0614  C3				     ret
+    493	0615					     endp
+    494				     ;------------------------------------------------
+    495
+    496				     ;-----------------------------------------------
+    497				     ; Draw frame element (left_el middle_el*cx	right_el)
+    498				     ;------------------------------------------------
+    499				     ; Enter:	     cx	= count	of repit moddle	element
+    500				     ;		     di	= destination
+    501				     ;		     si	= source of frame element
+    502				     ; Destroys:     ax
+    503				     ; Returns:	     (none)
+    504				     ;------------------------------------------------
+    505	0615			     draw_string     proc
+    506	0615  51				     push cx
+    507
+    508	0616  AC				     lodsb
+    509	0617  AB				     stosw
+    510
+    511	0618  AC				     lodsb
+    512	0619  F3> AB				     rep stosw
+    513
+Turbo Assembler	 Version 4.1	    03/13/23 14:25:10	    Page 10
+tests.asm
+
+
+
+    514	061B  AC				     lodsb
+    515	061C  AB				     stosw
+    516
+    517	061D  59				     pop cx
+    518	061E  C3				     ret
+    519	061F					     endp
+    520				     ;------------------------------------------------
+    521
+    522				     ;================================================
+    523				     ; Init handlerda data
+    524	061F  61 78 62 78 63 78	64+  signatures	     db	'ax', 'bx', 'cx', 'dxsidibpspdsescsss'
+    525	      78 73 69 64 69 62	70+
+    526	      73 70 64 73 65 73	63+
+    527	      73 73 73
+    528	0637  70 72 6F 67 72 61	6D+  warning	     db	'programm is already installed$'
+    529	      6D 20 69 73 20 61	6C+
+    530	      72 65 61 64 79 20	69+
+    531	      6E 73 74 61 6C 6C	65+
+    532	      64 24
+    533	0655  DA C4 BF		     frame_styles    db	0Dah, 0C4h, 0Bfh
+    534	0658  B3 20 B3				     db	0B3h, 020h, 0B3h
+    535	065B  C0 C4 D9				     db	0C0h, 0C4h, 0D9h
+    536				     ;================================================
+    537				     end Start
+Turbo Assembler	 Version 4.1	    03/13/23 14:25:10	    Page 11
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "03/13/23"
+??FILENAME			  Text	 "tests	  "
+??TIME				  Text	 "14:25:09"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@@ALREADY_INST			  Near	 DGROUP:0307
+@@COLUMNS			  Near	 DGROUP:01AE
+@@COMPARE			  Near	 DGROUP:0160
+@@CONVERT			  Near	 DGROUP:0113
+@@END_NEWLINE			  Near	 DGROUP:0183
+@@END_UPDATE			  Near	 DGROUP:0170
+@@LINE				  Near	 DGROUP:05E0
+@@NEXT				  Near	 DGROUP:05DD
+@@NEXT				  Near	 DGROUP:05FF
+@@PRESSED			  Near	 DGROUP:02E2
+@@SLEEP				  Near	 DGROUP:02F8
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0707H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 TESTS
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+ADD0				  Near	 DGROUP:0120
+ADD_SIGNATURES			  Near	 DGROUP:05DB
+BP_SAVE				  Word	 DGROUP:0313
+BX_SAVE				  Word	 DGROUP:030D
+CLEAN				  Near	 DGROUP:02B3
+CMP_BUFFERS			  Near	 DGROUP:013D
+COLUMNS				  Number 0012
+CONVERT_HEX			  Near	 DGROUP:0103
+CS_SAVE				  Word	 DGROUP:031D
+DELAY				  Byte	 DGROUP:0519
+DI_SAVE				  Word	 DGROUP:0311
+DRAW_FRAME			  Near	 DGROUP:05F0
+DRAW_STRING			  Near	 DGROUP:0615
+DS_SAVE				  Word	 DGROUP:0317
+ES_SAVE				  Word	 DGROUP:0319
+FAR_CLEAN			  Near	 DGROUP:0222
+FAR_SLEEP			  Near	 DGROUP:020F
+FRAME_STYLES			  Byte	 DGROUP:0655
+GREEN				  Number 00A2
+HEX				  Byte	 DGROUP:051A
+HEX_LOOP			  Near	 DGROUP:0116
+IMAGE_BUFFER			  Word	 DGROUP:031F
+INIT_HANDLER			  Near	 DGROUP:052A
+LINES				  Number 000E
+MODE				  Byte	 DGROUP:030C
+NEW02				  Near	 DGROUP:02FE
+NEW08				  Near	 DGROUP:01C4
+Turbo Assembler	 Version 4.1	    03/13/23 14:25:10	    Page 12
+Symbol Table
+
+
+
+NEW09				  Near	 DGROUP:02D8
+NOT_INSTALLED			  Near	 DGROUP:056C
+NOT_RESET			  Near	 DGROUP:02D4
+OLD02OFS			  Word	 DGROUP:0308
+OLD02SEG			  Word	 DGROUP:030A
+OLD08OFS			  Word	 DGROUP:01F3
+OLD08SEG			  Word	 DGROUP:01F5
+OLD09OFS			  Word	 DGROUP:02FA
+OLD09SEG			  Word	 DGROUP:02FC
+RESIDENT_END			  Near	 DGROUP:052A
+SAVED_BUFFER			  Word	 DGROUP:041B
+SHOW_BUFFER			  Near	 DGROUP:018A
+SIGNATURES			  Byte	 DGROUP:061F
+SI_SAVE				  Word	 DGROUP:030F
+SLEEP				  Near	 DGROUP:02C0
+SP_SAVE				  Word	 DGROUP:0315
+SS_SAVE				  Word	 DGROUP:031B
+START				  Near	 DGROUP:0100
+UPDATE				  Near	 DGROUP:0225
+VIDEO_ADRESS			  Word	 DGROUP:0517
+WARNING				  Byte	 DGROUP:0637
+
+Macro Name
+
+CONVERT
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  065E Word	  Public  CODE
+

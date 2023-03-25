@@ -1,0 +1,1070 @@
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 1
+rzdnt.asm
+
+
+
+      1				     .286
+      2	0000			     .model tiny
+      3	0000			     .code
+      4				     locals $$
+      5				     org 100h
+      6
+      7				     ;===========================================
+      8				     ; Exit Programm
+      9				     ;===========================================
+     10				     ; Entry:	  None
+     11				     ; Exit:	  None
+     12				     ; Expects:	  None
+     13				     ; Destroys:  AX, DX
+     14				     ;===========================================
+     15				     EXIT macro
+     16
+     17					  mov ax, 3100h
+     18					  mov dx, offset EOP
+     19					  shr dx, 4
+     20					  inc dx
+     21					  int 21h
+     22
+     23					  endm
+     24				     ;===========================================
+     25
+     26				     ;===========================================
+     27				     ; Print " = " to video memory
+     28				     ;===========================================
+     29				     ; Entry:	  None
+     30				     ; Exit:	  None
+     31				     ; Expects:	  None
+     32				     ; Destroys:  AX
+     33				     ;===========================================
+     34				     PRINT_EQUALS macro
+     35
+     36						  mov registr_buffer + bx, 4e20h
+     37						  add bx, 2
+     38
+     39						  mov registr_buffer + bx, 4e3dh
+     40						  add bx, 2
+     41
+     42						  mov registr_buffer + bx, 4e20h
+     43						  add bx, 2
+     44
+     45						  endm
+     46				     ;===========================================
+     47
+     48
+     49				     ;===========================================
+     50				     ; Print " | " to video memory
+     51				     ;===========================================
+     52				     ; Entry:	  None
+     53				     ; Exit:	  None
+     54				     ; Expects:	  None
+     55				     ; Destroys:  AX
+     56				     ;===========================================
+     57				     PRINT_DECOR  macro
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 2
+rzdnt.asm
+
+
+
+     58
+     59						  mov registr_buffer + bx, 4e20h
+     60						  add bx, 2
+     61
+     62						  mov registr_buffer + bx, 4eB3h
+     63						  add bx, 2
+     64
+     65						  mov registr_buffer + bx, 4e20h
+     66						  add bx, 2
+     67
+     68						  endm
+     69				     ;===========================================
+     70
+     71
+     72	0100			     Start: ;sti
+     73					    ;xor bx, bx
+     74					    ;mov es, bx
+     75					    ;mov bx, 4*8
+     76					    ;mov ax, es:[bx]
+     77					    ;mov old08ofs, ax
+     78					    ;mov es:[bx], offset new_08
+     79					    ;mov ax, es:[bx + 2]
+     80					    ;mov old08seg, ax
+     81					    ;mov ax, cs
+     82					    ;mov es:[bx	+ 2], ax
+     83					    ;cli
+     84
+     85	0100  FA			    cli
+     86	0101  33 DB			    xor	bx, bx
+     87	0103  8E C3			    mov	es, bx
+     88	0105  BB 0024			    mov	bx, 4*9
+     89	0108  26: 8B 07			    mov	ax, es:[bx]
+     90	010B  A3 0792r			    mov	old09ofs, ax
+     91	010E  26: C7 07	0722r		    mov	es:[bx], offset	new_09
+     92	0113  26: 8B 47	02		    mov	ax, es:[bx + 2]
+     93	0117  A3 0794r			    mov	old09seg, ax
+     94	011A  8C C8			    mov	ax, cs
+     95	011C  26: 89 47	02		    mov	es:[bx + 2], ax
+     96	0120  FB			    sti
+     97
+     98	0121  E4 60			    next: in  al, 60h
+     99	0123  3C 01				  cmp al, 1
+    100	0125  75 FA				  jne next
+    101
+    102					    EXIT
+1   103
+1   104	0127  B8 3100			  mov ax, 3100h
+1   105	012A  BA 0B17r			  mov dx, offset EOP
+1   106	012D  C1 EA 04			  shr dx, 4
+1   107	0130  42			  inc dx
+1   108	0131  CD 21			  int 21h
+1   109
+    110
+    111				     ;===========================================
+    112				     ; Print vertical line to "registr_buffer"
+    113				     ;===========================================
+    114				     ; Entry:	  CX = wigth
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 3
+rzdnt.asm
+
+
+
+    115				     ; Exit:	  None
+    116				     ; Expects:	  None
+    117				     ; Destroys:  None
+    118				     ;===========================================
+    119	0133			     print_vline  proc
+    120
+    121	0133  C7 87 0796r 4EC4			  $$draw_line: mov registr_buffer + bx,	4eC4h
+    122	0139  83 C3 02					       add bx, 2
+    123
+    124	013C  E2 F5					       loop $$draw_line
+    125	013E  C3				  ret
+    126	013F			     print_vline  endp
+    127				     ;===========================================
+    128
+    129				     ;===========================================
+    130				     ; PRINT HEX VALUE IN "REGISTR_BUFFER"
+    131				     ;===========================================
+    132				     ; Entry:	  AX = value
+    133				     ; Exit:	  BX = BX + 10
+    134				     ; Expects:	  ES = 0b800h
+    135				     ;		  BX = coordinate start	printing
+    136				     ; Destroys:  None
+    137				     ;===========================================
+    138	013F			     HEX_print proc
+    139	013F  56 51			       push si cx
+    140
+    141	0141  BE 000F			       mov si, 0Fh
+    142
+    143	0144  83 C3 06			       add bx, 6
+    144	0147  B9 0004			       mov cx, 4
+    145
+    146	014A  50			       $$print_value: push ax
+    147
+    148	014B  23 C6					      and ax, si
+    149
+    150	014D  3C 09					      cmp al, 09h
+    151	014F  7E 03					      jle $$if_ax_jle_09h
+    152	0151  EB 06 90					      jmp $$else_ax_jle_09h
+    153
+    154	0154  04 30					      $$if_ax_jle_09h:	   add al, 30h
+    155	0156  EB 07 90								   jmp $$end_if_ax_jle_09h
+    156
+    157	0159  05 0037					      $$else_ax_jle_09h:   add ax, 37h
+    158	015C  EB 01 90								   jmp $$end_if_ax_jle_09h
+    159
+    160	015F						      $$end_if_ax_jle_09h:
+    161
+    162	015F  B4 4E					      mov ah, 4eh
+    163	0161  89 87 0796r				      mov registr_buffer + bx, ax
+    164	0165  83 EB 02					      sub bx, 2
+    165
+    166	0168  58					      pop ax
+    167	0169  C1 E8 04					      shr ax, 4
+    168	016C  E2 DC					      loop $$print_value
+    169
+    170	016E  83 C3 0A				       add bx, 10
+    171	0171  C7 87 0796r 4E68		       mov registr_buffer + bx,	4e68h
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 4
+rzdnt.asm
+
+
+
+    172	0177  83 C3 02			       add bx, 2
+    173
+    174	017A  59 5E			       pop cx si
+    175
+    176	017C  C3			       ret
+    177	017D			     HEX_print endp
+    178				     ;===========================================
+    179
+    180				     include tests.asm
+1   181				     ;===========================================
+1   182				     ;
+1   183				     ;===========================================
+1   184				     ; Entry:
+1   185				     ; Exit:
+1   186				     ; Expects:
+1   187				     ; Destroys:
+1   188				     ;===========================================
+1   189	017D			     registrs_to_buffer	 proc
+1   190	017D  52					 push dx
+1   191	017E  55					 push bp
+1   192	017F  8B EC					 mov  bp, sp
+1   193
+1   194	0181  33 DB					 xor bx, bx
+1   195
+1   196	0183  C7 87 0796r 4E20				 mov registr_buffer + bx, 4e20h
+1   197	0189  83 C3 02					 add bx, 2
+1   198	018C  C7 87 0796r 4EDA				 mov registr_buffer + bx, 4eDAh
+1   199	0192  83 C3 02					 add bx, 2
+1   200
+1   201	0195  B9 000C					 mov cx, 12
+1   202	0198  E8 FF98					 call print_vline
+1   203
+1   204	019B  C7 87 0796r 4EBF				 mov registr_buffer + bx, 4eBFh
+1   205	01A1  83 C3 02					 add bx, 2
+1   206	01A4  C7 87 0796r 4E20				 mov registr_buffer + bx, 4e20h
+1   207	01AA  83 C3 02					 add bx, 2
+1   208							 ;=============================
+1   209							 PRINT_DECOR
+2   210
+2   211	01AD  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   212	01B3  83 C3 02				  add bx, 2
+2   213
+2   214	01B6  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   215	01BC  83 C3 02				  add bx, 2
+2   216
+2   217	01BF  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   218	01C5  83 C3 02				  add bx, 2
+2   219
+1   220
+1   221	01C8  C7 87 0796r 4E41				 mov registr_buffer + bx, 4e41h
+1   222	01CE  83 C3 02					 add bx, 2
+1   223	01D1  C7 87 0796r 4E58				 mov registr_buffer + bx, 4e58h
+1   224	01D7  83 C3 02					 add bx, 2
+1   225
+1   226							 PRINT_EQUALS
+2   227
+2   228	01DA  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 5
+rzdnt.asm
+
+
+
+2   229	01E0  83 C3 02				  add bx, 2
+2   230
+2   231	01E3  C7 87 0796r 4E3D			  mov registr_buffer + bx, 4e3dh
+2   232	01E9  83 C3 02				  add bx, 2
+2   233
+2   234	01EC  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   235	01F2  83 C3 02				  add bx, 2
+2   236
+1   237
+1   238	01F5  8B 46 1A					 mov ax, [bp + 26] ; ax	= old ax
+1   239	01F8  E8 FF44					 call HEX_print
+1   240
+1   241							 PRINT_DECOR
+2   242
+2   243	01FB  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   244	0201  83 C3 02				  add bx, 2
+2   245
+2   246	0204  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   247	020A  83 C3 02				  add bx, 2
+2   248
+2   249	020D  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   250	0213  83 C3 02				  add bx, 2
+2   251
+1   252							 ;=============================
+1   253							 PRINT_DECOR
+2   254
+2   255	0216  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   256	021C  83 C3 02				  add bx, 2
+2   257
+2   258	021F  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   259	0225  83 C3 02				  add bx, 2
+2   260
+2   261	0228  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   262	022E  83 C3 02				  add bx, 2
+2   263
+1   264
+1   265	0231  C7 87 0796r 4E42				 mov registr_buffer + bx, 4e42h
+1   266	0237  83 C3 02					 add bx, 2
+1   267	023A  C7 87 0796r 4E58				 mov registr_buffer + bx, 4e58h
+1   268	0240  83 C3 02					 add bx, 2
+1   269
+1   270							 PRINT_EQUALS
+2   271
+2   272	0243  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   273	0249  83 C3 02				  add bx, 2
+2   274
+2   275	024C  C7 87 0796r 4E3D			  mov registr_buffer + bx, 4e3dh
+2   276	0252  83 C3 02				  add bx, 2
+2   277
+2   278	0255  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   279	025B  83 C3 02				  add bx, 2
+2   280
+1   281
+1   282	025E  8B 46 18					 mov ax, [bp + 24] ; ax	= old bx
+1   283	0261  E8 FEDB					 call HEX_print
+1   284
+1   285							 PRINT_DECOR
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 6
+rzdnt.asm
+
+
+
+2   286
+2   287	0264  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   288	026A  83 C3 02				  add bx, 2
+2   289
+2   290	026D  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   291	0273  83 C3 02				  add bx, 2
+2   292
+2   293	0276  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   294	027C  83 C3 02				  add bx, 2
+2   295
+1   296							 ;=============================
+1   297							 PRINT_DECOR
+2   298
+2   299	027F  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   300	0285  83 C3 02				  add bx, 2
+2   301
+2   302	0288  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   303	028E  83 C3 02				  add bx, 2
+2   304
+2   305	0291  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   306	0297  83 C3 02				  add bx, 2
+2   307
+1   308
+1   309	029A  C7 87 0796r 4E43				 mov registr_buffer + bx, 4e43h
+1   310	02A0  83 C3 02					 add bx, 2
+1   311	02A3  C7 87 0796r 4E58				 mov registr_buffer + bx, 4e58h
+1   312	02A9  83 C3 02					 add bx, 2
+1   313
+1   314							 PRINT_EQUALS
+2   315
+2   316	02AC  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   317	02B2  83 C3 02				  add bx, 2
+2   318
+2   319	02B5  C7 87 0796r 4E3D			  mov registr_buffer + bx, 4e3dh
+2   320	02BB  83 C3 02				  add bx, 2
+2   321
+2   322	02BE  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   323	02C4  83 C3 02				  add bx, 2
+2   324
+1   325
+1   326	02C7  8B 46 16					 mov ax, [bp + 22] ; ax	= old cx
+1   327	02CA  E8 FE72					 call HEX_print
+1   328
+1   329							 PRINT_DECOR
+2   330
+2   331	02CD  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   332	02D3  83 C3 02				  add bx, 2
+2   333
+2   334	02D6  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   335	02DC  83 C3 02				  add bx, 2
+2   336
+2   337	02DF  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   338	02E5  83 C3 02				  add bx, 2
+2   339
+1   340							 ;=============================
+1   341							 PRINT_DECOR
+2   342
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 7
+rzdnt.asm
+
+
+
+2   343	02E8  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   344	02EE  83 C3 02				  add bx, 2
+2   345
+2   346	02F1  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   347	02F7  83 C3 02				  add bx, 2
+2   348
+2   349	02FA  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   350	0300  83 C3 02				  add bx, 2
+2   351
+1   352
+1   353	0303  C7 87 0796r 4E44				 mov registr_buffer + bx, 4e44h
+1   354	0309  83 C3 02					 add bx, 2
+1   355	030C  C7 87 0796r 4E58				 mov registr_buffer + bx, 4e58h
+1   356	0312  83 C3 02					 add bx, 2
+1   357
+1   358							 PRINT_EQUALS
+2   359
+2   360	0315  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   361	031B  83 C3 02				  add bx, 2
+2   362
+2   363	031E  C7 87 0796r 4E3D			  mov registr_buffer + bx, 4e3dh
+2   364	0324  83 C3 02				  add bx, 2
+2   365
+2   366	0327  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   367	032D  83 C3 02				  add bx, 2
+2   368
+1   369
+1   370	0330  8B 46 14					 mov ax, [bp + 20] ; ax	= old dx
+1   371	0333  E8 FE09					 call HEX_print
+1   372
+1   373							 PRINT_DECOR
+2   374
+2   375	0336  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   376	033C  83 C3 02				  add bx, 2
+2   377
+2   378	033F  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   379	0345  83 C3 02				  add bx, 2
+2   380
+2   381	0348  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   382	034E  83 C3 02				  add bx, 2
+2   383
+1   384							 ;=============================
+1   385							 PRINT_DECOR
+2   386
+2   387	0351  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   388	0357  83 C3 02				  add bx, 2
+2   389
+2   390	035A  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   391	0360  83 C3 02				  add bx, 2
+2   392
+2   393	0363  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   394	0369  83 C3 02				  add bx, 2
+2   395
+1   396
+1   397	036C  C7 87 0796r 4E53				 mov registr_buffer + bx, 4e53h
+1   398	0372  83 C3 02					 add bx, 2
+1   399	0375  C7 87 0796r 4E49				 mov registr_buffer + bx, 4e49h
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 8
+rzdnt.asm
+
+
+
+1   400	037B  83 C3 02					 add bx, 2
+1   401
+1   402							 PRINT_EQUALS
+2   403
+2   404	037E  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   405	0384  83 C3 02				  add bx, 2
+2   406
+2   407	0387  C7 87 0796r 4E3D			  mov registr_buffer + bx, 4e3dh
+2   408	038D  83 C3 02				  add bx, 2
+2   409
+2   410	0390  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   411	0396  83 C3 02				  add bx, 2
+2   412
+1   413
+1   414	0399  8B 46 12					 mov ax, [bp + 18] ; ax	= old si
+1   415	039C  E8 FDA0					 call HEX_print
+1   416
+1   417							 PRINT_DECOR
+2   418
+2   419	039F  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   420	03A5  83 C3 02				  add bx, 2
+2   421
+2   422	03A8  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   423	03AE  83 C3 02				  add bx, 2
+2   424
+2   425	03B1  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   426	03B7  83 C3 02				  add bx, 2
+2   427
+1   428							 ;=============================
+1   429							 PRINT_DECOR
+2   430
+2   431	03BA  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   432	03C0  83 C3 02				  add bx, 2
+2   433
+2   434	03C3  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   435	03C9  83 C3 02				  add bx, 2
+2   436
+2   437	03CC  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   438	03D2  83 C3 02				  add bx, 2
+2   439
+1   440
+1   441	03D5  C7 87 0796r 4E44				 mov registr_buffer + bx, 4e44h
+1   442	03DB  83 C3 02					 add bx, 2
+1   443	03DE  C7 87 0796r 4E49				 mov registr_buffer + bx, 4e49h
+1   444	03E4  83 C3 02					 add bx, 2
+1   445
+1   446							 PRINT_EQUALS
+2   447
+2   448	03E7  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   449	03ED  83 C3 02				  add bx, 2
+2   450
+2   451	03F0  C7 87 0796r 4E3D			  mov registr_buffer + bx, 4e3dh
+2   452	03F6  83 C3 02				  add bx, 2
+2   453
+2   454	03F9  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   455	03FF  83 C3 02				  add bx, 2
+2   456
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 9
+rzdnt.asm
+
+
+
+1   457
+1   458	0402  8B 46 10					 mov ax, [bp + 16] ; ax	= old di
+1   459	0405  E8 FD37					 call HEX_print
+1   460
+1   461							 PRINT_DECOR
+2   462
+2   463	0408  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   464	040E  83 C3 02				  add bx, 2
+2   465
+2   466	0411  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   467	0417  83 C3 02				  add bx, 2
+2   468
+2   469	041A  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   470	0420  83 C3 02				  add bx, 2
+2   471
+1   472							 ;=============================
+1   473							 PRINT_DECOR
+2   474
+2   475	0423  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   476	0429  83 C3 02				  add bx, 2
+2   477
+2   478	042C  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   479	0432  83 C3 02				  add bx, 2
+2   480
+2   481	0435  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   482	043B  83 C3 02				  add bx, 2
+2   483
+1   484
+1   485	043E  C7 87 0796r 4E42				 mov registr_buffer + bx, 4e42h
+1   486	0444  83 C3 02					 add bx, 2
+1   487	0447  C7 87 0796r 4E50				 mov registr_buffer + bx, 4e50h
+1   488	044D  83 C3 02					 add bx, 2
+1   489
+1   490							 PRINT_EQUALS
+2   491
+2   492	0450  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   493	0456  83 C3 02				  add bx, 2
+2   494
+2   495	0459  C7 87 0796r 4E3D			  mov registr_buffer + bx, 4e3dh
+2   496	045F  83 C3 02				  add bx, 2
+2   497
+2   498	0462  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   499	0468  83 C3 02				  add bx, 2
+2   500
+1   501
+1   502	046B  8B 46 0E					 mov ax, [bp + 14] ; ax	= old bp
+1   503	046E  E8 FCCE					 call HEX_print
+1   504
+1   505							 PRINT_DECOR
+2   506
+2   507	0471  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   508	0477  83 C3 02				  add bx, 2
+2   509
+2   510	047A  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   511	0480  83 C3 02				  add bx, 2
+2   512
+2   513	0483  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 10
+rzdnt.asm
+
+
+
+2   514	0489  83 C3 02				  add bx, 2
+2   515
+1   516							 ;=============================
+1   517							 PRINT_DECOR
+2   518
+2   519	048C  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   520	0492  83 C3 02				  add bx, 2
+2   521
+2   522	0495  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   523	049B  83 C3 02				  add bx, 2
+2   524
+2   525	049E  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   526	04A4  83 C3 02				  add bx, 2
+2   527
+1   528
+1   529	04A7  C7 87 0796r 4E53				 mov registr_buffer + bx, 4e53h
+1   530	04AD  83 C3 02					 add bx, 2
+1   531	04B0  C7 87 0796r 4E50				 mov registr_buffer + bx, 4e50h
+1   532	04B6  83 C3 02					 add bx, 2
+1   533
+1   534							 PRINT_EQUALS
+2   535
+2   536	04B9  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   537	04BF  83 C3 02				  add bx, 2
+2   538
+2   539	04C2  C7 87 0796r 4E3D			  mov registr_buffer + bx, 4e3dh
+2   540	04C8  83 C3 02				  add bx, 2
+2   541
+2   542	04CB  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   543	04D1  83 C3 02				  add bx, 2
+2   544
+1   545
+1   546	04D4  8B 46 0C					 mov ax, [bp + 12] ; ax	= old sp
+1   547	04D7  E8 FC65					 call HEX_print
+1   548
+1   549							 PRINT_DECOR
+2   550
+2   551	04DA  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   552	04E0  83 C3 02				  add bx, 2
+2   553
+2   554	04E3  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   555	04E9  83 C3 02				  add bx, 2
+2   556
+2   557	04EC  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   558	04F2  83 C3 02				  add bx, 2
+2   559
+1   560							 ;=============================
+1   561							 PRINT_DECOR
+2   562
+2   563	04F5  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   564	04FB  83 C3 02				  add bx, 2
+2   565
+2   566	04FE  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   567	0504  83 C3 02				  add bx, 2
+2   568
+2   569	0507  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   570	050D  83 C3 02				  add bx, 2
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 11
+rzdnt.asm
+
+
+
+2   571
+1   572
+1   573	0510  C7 87 0796r 4E44				 mov registr_buffer + bx, 4e44h
+1   574	0516  83 C3 02					 add bx, 2
+1   575	0519  C7 87 0796r 4E53				 mov registr_buffer + bx, 4e53h
+1   576	051F  83 C3 02					 add bx, 2
+1   577
+1   578							 PRINT_EQUALS
+2   579
+2   580	0522  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   581	0528  83 C3 02				  add bx, 2
+2   582
+2   583	052B  C7 87 0796r 4E3D			  mov registr_buffer + bx, 4e3dh
+2   584	0531  83 C3 02				  add bx, 2
+2   585
+2   586	0534  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   587	053A  83 C3 02				  add bx, 2
+2   588
+1   589
+1   590	053D  8B 46 0A					 mov ax, [bp + 10] ; ax	= old ds
+1   591	0540  E8 FBFC					 call HEX_print
+1   592
+1   593							 PRINT_DECOR
+2   594
+2   595	0543  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   596	0549  83 C3 02				  add bx, 2
+2   597
+2   598	054C  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   599	0552  83 C3 02				  add bx, 2
+2   600
+2   601	0555  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   602	055B  83 C3 02				  add bx, 2
+2   603
+1   604							 ;=============================
+1   605							 PRINT_DECOR
+2   606
+2   607	055E  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   608	0564  83 C3 02				  add bx, 2
+2   609
+2   610	0567  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   611	056D  83 C3 02				  add bx, 2
+2   612
+2   613	0570  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   614	0576  83 C3 02				  add bx, 2
+2   615
+1   616
+1   617	0579  C7 87 0796r 4E45				 mov registr_buffer + bx, 4e45h
+1   618	057F  83 C3 02					 add bx, 2
+1   619	0582  C7 87 0796r 4E53				 mov registr_buffer + bx, 4e53h
+1   620	0588  83 C3 02					 add bx, 2
+1   621
+1   622							 PRINT_EQUALS
+2   623
+2   624	058B  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   625	0591  83 C3 02				  add bx, 2
+2   626
+2   627	0594  C7 87 0796r 4E3D			  mov registr_buffer + bx, 4e3dh
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 12
+rzdnt.asm
+
+
+
+2   628	059A  83 C3 02				  add bx, 2
+2   629
+2   630	059D  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   631	05A3  83 C3 02				  add bx, 2
+2   632
+1   633
+1   634	05A6  8B 46 08					 mov ax, [bp + 8] ; ax = old es
+1   635	05A9  E8 FB93					 call HEX_print
+1   636
+1   637							 PRINT_DECOR
+2   638
+2   639	05AC  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   640	05B2  83 C3 02				  add bx, 2
+2   641
+2   642	05B5  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   643	05BB  83 C3 02				  add bx, 2
+2   644
+2   645	05BE  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   646	05C4  83 C3 02				  add bx, 2
+2   647
+1   648							 ;=============================
+1   649							 PRINT_DECOR
+2   650
+2   651	05C7  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   652	05CD  83 C3 02				  add bx, 2
+2   653
+2   654	05D0  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   655	05D6  83 C3 02				  add bx, 2
+2   656
+2   657	05D9  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   658	05DF  83 C3 02				  add bx, 2
+2   659
+1   660
+1   661	05E2  C7 87 0796r 4E53				 mov registr_buffer + bx, 4e53h
+1   662	05E8  83 C3 02					 add bx, 2
+1   663	05EB  C7 87 0796r 4E53				 mov registr_buffer + bx, 4e53h
+1   664	05F1  83 C3 02					 add bx, 2
+1   665
+1   666							 PRINT_EQUALS
+2   667
+2   668	05F4  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   669	05FA  83 C3 02				  add bx, 2
+2   670
+2   671	05FD  C7 87 0796r 4E3D			  mov registr_buffer + bx, 4e3dh
+2   672	0603  83 C3 02				  add bx, 2
+2   673
+2   674	0606  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   675	060C  83 C3 02				  add bx, 2
+2   676
+1   677
+1   678	060F  8B 46 06					 mov ax, [bp + 6] ; ax = old ss
+1   679	0612  E8 FB2A					 call HEX_print
+1   680
+1   681							 PRINT_DECOR
+2   682
+2   683	0615  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   684	061B  83 C3 02				  add bx, 2
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 13
+rzdnt.asm
+
+
+
+2   685
+2   686	061E  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   687	0624  83 C3 02				  add bx, 2
+2   688
+2   689	0627  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   690	062D  83 C3 02				  add bx, 2
+2   691
+1   692							 ;=============================
+1   693							 PRINT_DECOR
+2   694
+2   695	0630  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   696	0636  83 C3 02				  add bx, 2
+2   697
+2   698	0639  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   699	063F  83 C3 02				  add bx, 2
+2   700
+2   701	0642  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   702	0648  83 C3 02				  add bx, 2
+2   703
+1   704
+1   705	064B  C7 87 0796r 4E43				 mov registr_buffer + bx, 4e43h
+1   706	0651  83 C3 02					 add bx, 2
+1   707	0654  C7 87 0796r 4E53				 mov registr_buffer + bx, 4e53h
+1   708	065A  83 C3 02					 add bx, 2
+1   709
+1   710							 PRINT_EQUALS
+2   711
+2   712	065D  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   713	0663  83 C3 02				  add bx, 2
+2   714
+2   715	0666  C7 87 0796r 4E3D			  mov registr_buffer + bx, 4e3dh
+2   716	066C  83 C3 02				  add bx, 2
+2   717
+2   718	066F  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   719	0675  83 C3 02				  add bx, 2
+2   720
+1   721
+1   722	0678  8B 46 04					 mov ax, [bp + 4] ; ax = old cs
+1   723	067B  E8 FAC1					 call HEX_print
+1   724
+1   725							 PRINT_DECOR
+2   726
+2   727	067E  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   728	0684  83 C3 02				  add bx, 2
+2   729
+2   730	0687  C7 87 0796r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   731	068D  83 C3 02				  add bx, 2
+2   732
+2   733	0690  C7 87 0796r 4E20			  mov registr_buffer + bx, 4e20h
+2   734	0696  83 C3 02				  add bx, 2
+2   735
+1   736							 ;=============================
+1   737
+1   738	0699  C7 87 0796r 4E20				 mov registr_buffer + bx, 4e20h
+1   739	069F  83 C3 02					 add bx, 2
+1   740	06A2  C7 87 0796r 4EC0				 mov registr_buffer + bx, 4eC0h
+1   741	06A8  83 C3 02					 add bx, 2
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 14
+rzdnt.asm
+
+
+
+1   742
+1   743	06AB  B9 000C					 mov cx, 12
+1   744	06AE  E8 FA82					 call print_vline
+1   745
+1   746	06B1  C7 87 0796r 4ED9				 mov registr_buffer + bx, 4eD9h
+1   747	06B7  83 C3 02					 add bx, 2
+1   748	06BA  C7 87 0796r 4E20				 mov registr_buffer + bx, 4e20h
+1   749
+1   750	06C0  33 DB					 xor bx, bx
+1   751	06C2  5D					 pop bp
+1   752	06C3  5A					 pop dx
+1   753	06C4  C3					 ret
+1   754	06C5			     registrs_to_buffer	 endp
+1   755				     ;===========================================
+1   756
+1   757				     ;===========================================
+1   758				     ; SCANF OLD VIDEO BUFFER
+1   759				     ;===========================================
+1   760				     ; Entry:
+1   761				     ; Exit:
+1   762				     ; Expects:
+1   763				     ; Destroys:
+1   764				     ;===========================================
+1   765	06C5			     old_video_to_buffer proc
+1   766	06C5  BB B800					 mov bx, 0b800h
+1   767	06C8  8E C3					 mov es, bx
+1   768
+1   769	06CA  BB 0000					 mov bx, 0
+1   770	06CD  BE 0000					 mov si, 0
+1   771
+1   772	06D0  B9 000E					 mov cx, 14
+1   773	06D3  BF 0010					 $$all_video_record: mov di, 16
+1   774	06D6  26: 8B 04							     $$string_video_record:  mov ax, es:[si]
+1   775	06D9  89 87 0956r									     mov old_screen_buffer + bx, ax
+1   776	06DD  33 C0										     xor ax, ax
+1   777	06DF  83 C3 02										     add bx, 2
+1   778	06E2  83 C6 02										     add si, 2
+1   779
+1   780	06E5  4F										     dec di
+1   781	06E6  83 FF 00										     cmp di, 0
+1   782	06E9  75 EB										     jne $$string_video_record
+1   783	06EB  81 C6 0080						     add  si, 128
+1   784	06EF  E2 E2							     loop $$all_video_record
+1   785
+1   786	06F1  C3					 ret
+1   787	06F2			     old_video_to_buffer endp
+1   788				     ;===========================================
+1   789
+1   790
+1   791				     ;===========================================
+1   792				     ; PRINTF VIDEO BUFFER
+1   793				     ;===========================================
+1   794				     ; Entry:	 BX = pointer to buffer
+1   795				     ; Exit:
+1   796				     ; Expects:
+1   797				     ; Destroys:
+1   798				     ;===========================================
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 15
+rzdnt.asm
+
+
+
+1   799	06F2			     printf_video_buffer proc
+1   800	06F2  56 51 57					 push si cx di
+1   801
+1   802	06F5  53					 push bx
+1   803	06F6  BB B800					 mov bx, 0b800h
+1   804	06F9  8E C3					 mov es, bx
+1   805	06FB  5B					 pop bx
+1   806
+1   807	06FC  BE 0000					 mov si, 0
+1   808	06FF  B9 000E					 mov cx, 14
+1   809	0702  BF 0010					 $$all_printf_video: mov di, 16
+1   810	0705  53							     $$string_printf_video:  push bx
+1   811	0706  8B 1F										     mov  bx,[bx]
+1   812	0708  26: 89 1C										     mov  es:[si], bx
+1   813	070B  5B										     pop  bx
+1   814
+1   815	070C  83 C3 02										     add  bx, 2
+1   816	070F  83 C6 02										     add  si, 2
+1   817
+1   818	0712  4F										     dec  di
+1   819	0713  83 FF 00										     cmp  di, 0
+1   820	0716  75 ED										     jne $$string_printf_video
+1   821	0718  81 C6 0080						     add si, 128
+1   822	071C  E2 E4							     loop $$all_printf_video
+1   823	071E  5F 59 5E					 pop di	cx si
+1   824	0721  C3					 ret
+1   825	0722			     printf_video_buffer endp
+1   826				     ;===========================================
+    827
+    828				     ;===========================================
+    829				     ; VIEW REZIDENT PROGRAMM
+    830				     ;===========================================
+    831				     ; Entry:	  None
+    832				     ; Exit:	  None
+    833				     ; Expects:	  None
+    834				     ; Destroys:  None
+    835				     ;===========================================
+    836	0722			     new_09		     proc
+    837	0722  50 53 51 52				     push ax bx	cx dx
+    838	0726  56 57					     push si di
+    839	0728  55 54					     push bp sp
+    840	072A  1E 06 16 0E				     push ds es	ss cs
+    841
+    842	072E  E4 60					 $$view: in  al, 60h
+    843	0730  3C 0D						     cmp al, 0dh ; al equaly scan code "+="
+    844	0732  74 03						     je	 $$print_value_registrs
+    845	0734  EB 4D 90						     jmp $$sleep_view
+    846
+    847	0737  A0 0B16r					 $$print_value_registrs: mov al, mode
+    848	073A  3C 00													     cmp al,+
+    849				     00h
+    850	073C  74 04													     je	    +
+    851				     $$on_registrs
+    852	073E  3C 01													     cmp al,+
+    853				     01h
+    854	0740  74 15													     je	    +
+    855				     $$off_registrs
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 16
+rzdnt.asm
+
+
+
+    856
+    857	0742  C6 06 0B16r 01 90						     $$on_registrs:		     mov [mode], 01h
+    858	0748  E8 FF7A													     call   +
+    859				     old_video_to_buffer
+    860	074B  E8 FA2F													     call   +
+    861				     registrs_to_buffer
+    862	074E  BB 0796r								     lea bx, registr_buffer
+    863	0751  E8 FF9E													     call   +
+    864				     printf_video_buffer
+    865	0754  EB 10 90								     jmp  $$end_view
+    866
+    867	0757  C6 06 0B16r 00 90						     $$off_registrs:	     mov [mode], 00h
+    868	075D  BB 0956r													     lea bx,+
+    869				     old_screen_buffer
+    870	0760  E8 FF8F													     call   +
+    871				     printf_video_buffer
+    872	0763  EB 01 90													     jmp    +
+    873				     $$end_view
+    874
+    875	0766						     $$end_view:
+    876
+    877	0766  E4 61					     in	 al, 61h
+    878	0768  0C 80					     or	 al, 80h
+    879	076A  E6 61					     out 61h, al
+    880	076C  24 7F					     and al, not 80h
+    881	076E  E6 61					     out 61h, al
+    882
+    883	0770  B0 20					     mov al, 20h
+    884	0772  E6 20					     out 20h, al
+    885
+    886	0774  83 C4 02					     add sp, 2
+    887
+    888	0777  17 07 1F					     pop ss es ds
+    889	077A  5C 5D					     pop sp bp
+    890	077C  5F 5E					     pop di si
+    891	077E  5A 59 5B 58				     pop dx cx bx ax
+    892
+    893	0782  CF					     iret
+    894
+    895	0783  83 C4 02		     $$sleep_view:	     add sp, 2
+    896
+    897	0786  17 07 1F					     pop ss es ds
+    898	0789  5C 5D					     pop sp bp
+    899	078B  5F 5E					     pop di si
+    900	078D  5A 59 5B 58				     pop dx cx bx ax
+    901
+    902	0791  EA						  db 0eah
+    903	0792  0000					     old09ofs dw 0
+    904	0794  0000					     old09seg dw 0
+    905
+    906	0796			     new_09		     endp
+    907				     ;===========================================
+    908
+    909	0796  E0*(0000)		     registr_buffer    dw 224 dup (0)
+    910	0956  E0*(0000)		     old_screen_buffer dw 224 dup (0)
+    911
+    912	0B16  00		     mode db 00h
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 17
+rzdnt.asm
+
+
+
+    913
+    914	0B17			     EOP: end Start
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 18
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+$$ALL_PRINTF_VIDEO		  Near	 DGROUP:0702
+$$ALL_VIDEO_RECORD		  Near	 DGROUP:06D3
+$$DRAW_LINE			  Near	 DGROUP:0133
+$$ELSE_AX_JLE_09H		  Near	 DGROUP:0159
+$$END_IF_AX_JLE_09H		  Near	 DGROUP:015F
+$$END_VIEW			  Near	 DGROUP:0766
+$$IF_AX_JLE_09H			  Near	 DGROUP:0154
+$$OFF_REGISTRS			  Near	 DGROUP:0757
+$$ON_REGISTRS			  Near	 DGROUP:0742
+$$PRINT_VALUE			  Near	 DGROUP:014A
+$$PRINT_VALUE_REGISTRS		  Near	 DGROUP:0737
+$$SLEEP_VIEW			  Near	 DGROUP:0783
+$$STRING_PRINTF_VIDEO		  Near	 DGROUP:0705
+$$STRING_VIDEO_RECORD		  Near	 DGROUP:06D6
+$$VIEW				  Near	 DGROUP:072E
+??DATE				  Text	 "03/20/23"
+??FILENAME			  Text	 "rzdnt	  "
+??TIME				  Text	 "20:23:11"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0707H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 RZDNT
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+EOP				  Near	 DGROUP:0B17
+HEX_PRINT			  Near	 DGROUP:013F
+MODE				  Byte	 DGROUP:0B16
+NEW_09				  Near	 DGROUP:0722
+NEXT				  Near	 DGROUP:0121
+OLD09OFS			  Word	 DGROUP:0792
+OLD09SEG			  Word	 DGROUP:0794
+OLD_SCREEN_BUFFER		  Word	 DGROUP:0956
+OLD_VIDEO_TO_BUFFER		  Near	 DGROUP:06C5
+PRINTF_VIDEO_BUFFER		  Near	 DGROUP:06F2
+PRINT_VLINE			  Near	 DGROUP:0133
+REGISTRS_TO_BUFFER		  Near	 DGROUP:017D
+REGISTR_BUFFER			  Word	 DGROUP:0796
+START				  Near	 DGROUP:0100
+
+Macro Name
+
+EXIT
+PRINT_DECOR
+PRINT_EQUALS
+Turbo Assembler	 Version 4.1	    03/20/23 20:23:12	    Page 19
+Symbol Table
+
+
+
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  0B17 Word	  Public  CODE
+
