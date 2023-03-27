@@ -1,4 +1,4 @@
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 1
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 1
 rzdnt.asm
 
 
@@ -60,7 +60,7 @@ rzdnt.asm
      55				     ; Destroys:  AX
      56				     ;===========================================
      57				     PRINT_DECOR  macro
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 2
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 2
 rzdnt.asm
 
 
@@ -84,10 +84,10 @@ rzdnt.asm
      74	0103  8E C3			     mov es, bx
      75	0105  BB 0020			     mov bx, 4*8
      76	0108  26: 8B 07			     mov ax, es:[bx]
-     77	010B  A3 03DDr			     mov old08ofs, ax
-     78	010E  26: C7 07	03DBr		     mov es:[bx], offset new_08
+     77	010B  A3 03F6r			     mov old08ofs, ax
+     78	010E  26: C7 07	03F4r		     mov es:[bx], offset new_08
      79	0113  26: 8B 47	02		     mov ax, es:[bx + 2]
-     80	0117  A3 03DFr			     mov old08seg, ax
+     80	0117  A3 03F8r			     mov old08seg, ax
      81	011A  8C C8			     mov ax, cs
      82	011C  26: 89 47	02		     mov es:[bx	+ 2], ax
      83	0120  FA			     cli
@@ -97,625 +97,596 @@ rzdnt.asm
      87	0124  8E C3			     mov es, bx
      88	0126  BB 0024			     mov bx, 4*9
      89	0129  26: 8B 07			     mov ax, es:[bx]
-     90	012C  A3 03D7r			     mov old09ofs, ax
-     91	012F  26: C7 07	0380r		     mov es:[bx], offset new_09
+     90	012C  A3 03F0r			     mov old09ofs, ax
+     91	012F  26: C7 07	0399r		     mov es:[bx], offset new_09
      92	0134  26: 8B 47	02		     mov ax, es:[bx + 2]
-     93	0138  A3 03D9r			     mov old09seg, ax
+     93	0138  A3 03F2r			     mov old09seg, ax
      94	013B  8C C8			     mov ax, cs
      95	013D  26: 89 47	02		     mov es:[bx	+ 2], ax
      96	0141  FB			     sti
      97
-     98	0142  B9 0467r				     mov cx, offset registr_buffer
-     99	0145  B9 0629r				     mov cx, offset old_screen_buffer
-    100	0148  B9 07EBr				     mov cx, offset mode
+     98						     ;mov ax, offset registr_buffer
+     99						     ;mov ax, offset old_video_to_buffer
+    100						     ;mov ax, offset
     101
-    102	014B  B1 0D				     mov cl, 0dh
-    103	014D  CD 09				     int 9h
-    104	014F  CD 08				     int 8h
-    105	0151  B1 21				     mov cl, 21h
-    106	0153  CD 09				     int 9h
-    107	0155  CD 08				     int 8h
-    108
-    109	0157  B4 09			     mov ah, 09h
-    110	0159  BA 07EFr				 mov dx, offset	rezident_active
-    111	015C  CD 21				 int 21h
-    112
-    113					     EXIT
-1   114
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 3
+    102	0142  B4 09			     mov ah, 09h
+    103	0144  BA 07FAr				 mov dx, offset	rezident_active
+    104	0147  CD 21				 int 21h
+    105
+    106					     EXIT
+1   107
+1   108	0149  B8 3100			  mov ax, 3100h
+1   109	014C  BA 0898r			  mov dx, offset EOP
+1   110	014F  C1 EA 04			  shr dx, 4
+1   111	0152  42			  inc dx
+1   112	0153  CD 21			  int 21h
+1   113
+    114
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 3
 rzdnt.asm
 
 
 
-1   115	015E  B8 3100			  mov ax, 3100h
-1   116	0161  BA 0905r			  mov dx, offset EOP
-1   117	0164  C1 EA 04			  shr dx, 4
-1   118	0167  42			  inc dx
-1   119	0168  CD 21			  int 21h
-1   120
-    121
+    115				     ;===========================================
+    116				     ; Print vertical line to "registr_buffer"
+    117				     ;===========================================
+    118				     ; Entry:	  CX = wigth
+    119				     ; Exit:	  None
+    120				     ; Expects:	  None
+    121				     ; Destroys:  None
     122				     ;===========================================
-    123				     ; Print vertical line to "registr_buffer"
-    124				     ;===========================================
-    125				     ; Entry:	  CX = wigth
-    126				     ; Exit:	  None
-    127				     ; Expects:	  None
-    128				     ; Destroys:  None
-    129				     ;===========================================
-    130	016A			     print_vline  proc
-    131
-    132	016A  C7 87 0467r 4EC4			  $$draw_line: mov registr_buffer + bx,	4eC4h
-    133	0170  83 C3 02					       add bx, 2
-    134
-    135	0173  E2 F5					       loop $$draw_line
-    136	0175  C3				  ret
-    137	0176			     print_vline  endp
-    138				     ;===========================================
-    139
-    140				     ;===========================================
-    141				     ; PRINT HEX VALUE IN "REGISTR_BUFFER"
-    142				     ;===========================================
-    143				     ; Entry:	  AX = value
-    144				     ; Exit:	  BX = BX + 10
-    145				     ; Expects:	  ES = 0b800h
-    146				     ;		  BX = coordinate start	printing
-    147				     ; Destroys:  None
-    148				     ;===========================================
-    149	0176			     HEX_print proc
-    150	0176  56 51			       push si cx
+    123	0155			     print_vline  proc
+    124
+    125	0155  C7 87 0472r 4EC4			  $$draw_line: mov registr_buffer + bx,	4eC4h
+    126	015B  83 C3 02					       add bx, 2
+    127
+    128	015E  E2 F5					       loop $$draw_line
+    129	0160  C3				  ret
+    130	0161			     print_vline  endp
+    131				     ;===========================================
+    132
+    133				     ;===========================================
+    134				     ; PRINT HEX VALUE IN "REGISTR_BUFFER"
+    135				     ;===========================================
+    136				     ; Entry:	  AX = value
+    137				     ; Exit:	  BX = BX + 10
+    138				     ; Expects:	  ES = 0b800h
+    139				     ;		  BX = coordinate start	printing
+    140				     ; Destroys:  None
+    141				     ;===========================================
+    142	0161			     HEX_print	     proc
+    143	0161  56 51				     push si cx
+    144
+    145	0163  BE 000F				     mov si, 0Fh
+    146
+    147	0166  83 C3 06				     add bx, 6
+    148	0169  B9 0004				     mov cx, 4
+    149
+    150	016C  50				     $$print_value:  push ax
     151
-    152	0178  BE 000F			       mov si, 0Fh
+    152	016D  23 C6						     and ax, si
     153
-    154	017B  83 C3 06			       add bx, 6
-    155	017E  B9 0004			       mov cx, 4
-    156
-    157	0181  50			       $$print_value: push ax
-    158
-    159	0182  23 C6					      and ax, si
+    154	016F  3C 09						     cmp al, 09h
+    155	0171  7E 03						     jle $$if_ax_jle_09h
+    156	0173  EB 06 90						     jmp $$else_ax_jle_09h
+    157
+    158	0176  04 30						     $$if_ax_jle_09h:	 add al, 30h
+    159	0178  EB 07 90								     jmp $$end_if_ax_jle_09h
     160
-    161	0184  3C 09					      cmp al, 09h
-    162	0186  7E 03					      jle $$if_ax_jle_09h
-    163	0188  EB 06 90					      jmp $$else_ax_jle_09h
-    164
-    165	018B  04 30					      $$if_ax_jle_09h:	   add al, 30h
-    166	018D  EB 07 90								   jmp $$end_if_ax_jle_09h
-    167
-    168	0190  05 0037					      $$else_ax_jle_09h:   add ax, 37h
-    169	0193  EB 01 90								   jmp $$end_if_ax_jle_09h
-    170
-    171	0196						      $$end_if_ax_jle_09h:
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 4
+    161	017B  05 0037						     $$else_ax_jle_09h:	  add ax, 37h
+    162	017E  EB 01 90								     jmp $$end_if_ax_jle_09h
+    163
+    164	0181							     $$end_if_ax_jle_09h:
+    165
+    166	0181  B4 4E						     mov ah, 4eh
+    167	0183  89 87 0472r					     mov registr_buffer	+ bx, ax
+    168	0187  83 EB 02						     sub bx, 2
+    169
+    170	018A  58						     pop ax
+    171	018B  C1 E8 04						     shr ax, 4
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 4
 rzdnt.asm
 
 
 
-    172
-    173	0196  B4 4E					      mov ah, 4eh
-    174	0198  89 87 0467r				      mov registr_buffer + bx, ax
-    175	019C  83 EB 02					      sub bx, 2
-    176
-    177	019F  58					      pop ax
-    178	01A0  C1 E8 04					      shr ax, 4
-    179	01A3  E2 DC					      loop $$print_value
-    180
-    181	01A5  83 C3 0A				       add bx, 10
-    182	01A8  C7 87 0467r 4E68		       mov registr_buffer + bx,	4e68h
-    183	01AE  83 C3 02			       add bx, 2
-    184
-    185	01B1  59 5E			       pop cx si
-    186
-    187	01B3  C3			       ret
-    188	01B4			     HEX_print endp
-    189				     ;===========================================
-    190
-    191				     include tests.asm
-1   192				     ;===========================================
-1   193				     ; Put value registrs on buffer
+    172	018E  E2 DC						     loop $$print_value
+    173
+    174	0190  83 C3 0A					     add bx, 10
+    175	0193  C7 87 0472r 4E68			     mov registr_buffer	+ bx, 4e68h
+    176	0199  83 C3 02				     add bx, 2
+    177
+    178	019C  59 5E				     pop cx si
+    179
+    180	019E  C3				     ret
+    181	019F			     HEX_print	     endp
+    182				     ;===========================================
+    183
+    184				     include tests.asm
+1   185				     ;===========================================
+1   186				     ; Put value registrs on buffer
+1   187				     ;===========================================
+1   188				     ; Entry:	  AH = color
+1   189				     ;		  CX = name registrs
+1   190				     ;		  DX = shift relative to bp
+1   191				     ; Exit:	  BX = BX + 16
+1   192				     ; Expects:
+1   193				     ; Destroys:
 1   194				     ;===========================================
-1   195				     ; Entry:	  AH = color
-1   196				     ;		  CX = name registrs
-1   197				     ;		  DX = shift relative to bp
-1   198				     ; Exit:	  BX = BX + 16
-1   199				     ; Expects:
-1   200				     ; Destroys:
-1   201				     ;===========================================
-1   202	01B4			     one_registr_to_buffer   proc
-1   203	01B4  50					     push ax
-1   204							     PRINT_DECOR
-2   205
-2   206	01B5  C7 87 0467r 4E20			  mov registr_buffer + bx, 4e20h
-2   207	01BB  83 C3 02				  add bx, 2
-2   208
-2   209	01BE  C7 87 0467r 4EB3			  mov registr_buffer + bx, 4eB3h
-2   210	01C4  83 C3 02				  add bx, 2
-2   211
-2   212	01C7  C7 87 0467r 4E20			  mov registr_buffer + bx, 4e20h
-2   213	01CD  83 C3 02				  add bx, 2
-2   214
-1   215
-1   216	01D0  88 AF 0467r				     mov byte ptr registr_buffer + bx, ch
-1   217	01D4  83 C3 01					     add bx, 1
-1   218	01D7  88 A7 0467r				     mov byte ptr registr_buffer + bx, ah
-1   219	01DB  83 C3 01					     add bx, 1
-1   220	01DE  88 8F 0467r				     mov byte ptr registr_buffer + bx, cl
-1   221	01E2  83 C3 01					     add bx, 1
-1   222	01E5  88 A7 0467r				     mov byte ptr registr_buffer + bx, ah
-1   223	01E9  83 C3 01					     add bx, 1
-1   224
-1   225							     PRINT_EQUALS
-2   226
-2   227	01EC  C7 87 0467r 4E20			  mov registr_buffer + bx, 4e20h
-2   228	01F2  83 C3 02				  add bx, 2
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 5
+1   195	019F			     one_registr_to_buffer   proc
+1   196	019F  50					     push ax
+1   197							     PRINT_DECOR
+2   198
+2   199	01A0  C7 87 0472r 4E20			  mov registr_buffer + bx, 4e20h
+2   200	01A6  83 C3 02				  add bx, 2
+2   201
+2   202	01A9  C7 87 0472r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   203	01AF  83 C3 02				  add bx, 2
+2   204
+2   205	01B2  C7 87 0472r 4E20			  mov registr_buffer + bx, 4e20h
+2   206	01B8  83 C3 02				  add bx, 2
+2   207
+1   208
+1   209	01BB  88 AF 0472r				     mov byte ptr registr_buffer + bx, ch
+1   210	01BF  83 C3 01					     add bx, 1
+1   211	01C2  88 A7 0472r				     mov byte ptr registr_buffer + bx, ah
+1   212	01C6  83 C3 01					     add bx, 1
+1   213	01C9  88 8F 0472r				     mov byte ptr registr_buffer + bx, cl
+1   214	01CD  83 C3 01					     add bx, 1
+1   215	01D0  88 A7 0472r				     mov byte ptr registr_buffer + bx, ah
+1   216	01D4  83 C3 01					     add bx, 1
+1   217
+1   218							     PRINT_EQUALS
+2   219
+2   220	01D7  C7 87 0472r 4E20			  mov registr_buffer + bx, 4e20h
+2   221	01DD  83 C3 02				  add bx, 2
+2   222
+2   223	01E0  C7 87 0472r 4E3D			  mov registr_buffer + bx, 4e3dh
+2   224	01E6  83 C3 02				  add bx, 2
+2   225
+2   226	01E9  C7 87 0472r 4E20			  mov registr_buffer + bx, 4e20h
+2   227	01EF  83 C3 02				  add bx, 2
+2   228
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 5
 rzdnt.asm
 
 
 
-2   229
-2   230	01F5  C7 87 0467r 4E3D			  mov registr_buffer + bx, 4e3dh
-2   231	01FB  83 C3 02				  add bx, 2
-2   232
-2   233	01FE  C7 87 0467r 4E20			  mov registr_buffer + bx, 4e20h
-2   234	0204  83 C3 02				  add bx, 2
-2   235
-1   236
-1   237	0207  55					     push bp
-1   238	0208  03 EA					     add  bp, dx
-1   239	020A  8B 46 00					     mov  ax, [bp] ; ax	= value	register
-1   240	020D  5D					     pop  bp
-1   241	020E  E8 FF65					     call HEX_print
-1   242
-1   243							     PRINT_DECOR
-2   244
-2   245	0211  C7 87 0467r 4E20			  mov registr_buffer + bx, 4e20h
-2   246	0217  83 C3 02				  add bx, 2
-2   247
-2   248	021A  C7 87 0467r 4EB3			  mov registr_buffer + bx, 4eB3h
-2   249	0220  83 C3 02				  add bx, 2
-2   250
-2   251	0223  C7 87 0467r 4E20			  mov registr_buffer + bx, 4e20h
-2   252	0229  83 C3 02				  add bx, 2
-2   253
-1   254	022C  58					     pop ax
-1   255	022D  C3					     ret
-1   256	022E			     one_registr_to_buffer   endp
-1   257				     ;===========================================
-1   258
-1   259
+1   229
+1   230	01F2  55					     push bp
+1   231	01F3  03 EA					     add  bp, dx
+1   232	01F5  8B 46 00					     mov  ax, [bp] ; ax	= value	register
+1   233	01F8  5D					     pop  bp
+1   234	01F9  E8 FF65					     call HEX_print
+1   235
+1   236							     PRINT_DECOR
+2   237
+2   238	01FC  C7 87 0472r 4E20			  mov registr_buffer + bx, 4e20h
+2   239	0202  83 C3 02				  add bx, 2
+2   240
+2   241	0205  C7 87 0472r 4EB3			  mov registr_buffer + bx, 4eB3h
+2   242	020B  83 C3 02				  add bx, 2
+2   243
+2   244	020E  C7 87 0472r 4E20			  mov registr_buffer + bx, 4e20h
+2   245	0214  83 C3 02				  add bx, 2
+2   246
+1   247	0217  58					     pop ax
+1   248	0218  C3					     ret
+1   249	0219			     one_registr_to_buffer   endp
+1   250				     ;===========================================
+1   251
+1   252
+1   253				     ;===========================================
+1   254				     ; Put value registrs on buffer
+1   255				     ;===========================================
+1   256				     ; Entry:
+1   257				     ; Exit:
+1   258				     ; Expects:
+1   259				     ; Destroys:
 1   260				     ;===========================================
-1   261				     ; Put value registrs on buffer
-1   262				     ;===========================================
-1   263				     ; Entry:
-1   264				     ; Exit:
-1   265				     ; Expects:
-1   266				     ; Destroys:
-1   267				     ;===========================================
-1   268	022E			     registrs_to_buffer	 proc
-1   269	022E  52					 push dx
-1   270	022F  55					 push bp
-1   271	0230  8B EC					 mov  bp, sp
-1   272
-1   273	0232  33 DB					 xor bx, bx
-1   274
-1   275	0234  C7 87 0467r 4E20				 mov registr_buffer + bx, 4e20h
-1   276	023A  83 C3 02					 add bx, 2
-1   277	023D  C7 87 0467r 4EDA				 mov registr_buffer + bx, 4eDAh
-1   278	0243  83 C3 02					 add bx, 2
-1   279
-1   280	0246  B9 000C					 mov cx, 12
-1   281	0249  E8 FF1E					 call print_vline
-1   282
-1   283	024C  C7 87 0467r 4EBF				 mov registr_buffer + bx, 4eBFh
-1   284	0252  83 C3 02					 add bx, 2
-1   285	0255  C7 87 0467r 4E20				 mov registr_buffer + bx, 4e20h
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 6
+1   261	0219			     registrs_to_buffer	 proc
+1   262	0219  50					 push ax
+1   263	021A  55					 push bp
+1   264	021B  8B EC					 mov  bp, sp
+1   265	021D  53 51 52 1E				 push bx cx dx ds
+1   266
+1   267	0221  33 DB					 xor bx, bx
+1   268
+1   269	0223  C7 87 0472r 4E20				 mov registr_buffer + bx, 4e20h
+1   270	0229  83 C3 02					 add bx, 2
+1   271	022C  C7 87 0472r 4EDA				 mov registr_buffer + bx, 4eDAh
+1   272	0232  83 C3 02					 add bx, 2
+1   273
+1   274	0235  B9 000C					 mov cx, 12
+1   275	0238  E8 FF1A					 call print_vline
+1   276
+1   277	023B  C7 87 0472r 4EBF				 mov registr_buffer + bx, 4eBFh
+1   278	0241  83 C3 02					 add bx, 2
+1   279	0244  C7 87 0472r 4E20				 mov registr_buffer + bx, 4e20h
+1   280	024A  83 C3 02					 add bx, 2
+1   281
+1   282	024D  B4 4E					 mov ah, 4eh
+1   283							 ;=============================
+1   284	024F  B9 4158					 mov cx, 4158h
+1   285	0252  BA 001C					 mov dx, 28
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 6
 rzdnt.asm
 
 
 
-1   286	025B  83 C3 02					 add bx, 2
-1   287
-1   288	025E  B4 4E					 mov ah, 4eh
-1   289							 ;=============================
-1   290	0260  B9 4158					 mov cx, 4158h
-1   291	0263  BA 001C					 mov dx, 28
-1   292	0266  E8 FF4B					 call one_registr_to_buffer ; printf ax
-1   293							 ;=============================
-1   294	0269  B9 4258					 mov cx, 4258h
-1   295	026C  BA 001A					 mov dx, 26
-1   296	026F  E8 FF42					 call one_registr_to_buffer ; printf bx
-1   297							 ;=============================
-1   298	0272  B9 4358					 mov cx, 4358h
-1   299	0275  BA 0018					 mov dx, 24
-1   300	0278  E8 FF39					 call one_registr_to_buffer ; printf cx
-1   301							 ;=============================
-1   302	027B  B9 4458					 mov cx, 4458h
-1   303	027E  BA 0016					 mov dx, 22
-1   304	0281  E8 FF30					 call one_registr_to_buffer ; printf dx
-1   305							 ;=============================
-1   306	0284  B9 5349					 mov cx, 5349h
-1   307	0287  BA 0014					 mov dx, 20
-1   308	028A  E8 FF27					 call one_registr_to_buffer ; printf si
-1   309							 ;=============================
-1   310	028D  B9 4449					 mov cx, 4449h
-1   311	0290  BA 0012					 mov dx, 18
-1   312	0293  E8 FF1E					 call one_registr_to_buffer ; printf di
-1   313							 ;=============================
-1   314	0296  B9 4250					 mov cx, 4250h
-1   315	0299  BA 0010					 mov dx, 16
-1   316	029C  E8 FF15					 call one_registr_to_buffer ; printf bp
-1   317							 ;=============================
-1   318	029F  B9 5350					 mov cx, 5350h
-1   319	02A2  BA 000E					 mov dx, 14
-1   320	02A5  E8 FF0C					 call one_registr_to_buffer ; printf sp
-1   321							 ;=============================
-1   322	02A8  B9 4453					 mov cx, 4453h
-1   323	02AB  BA 000C					 mov dx, 12
-1   324	02AE  E8 FF03					 call one_registr_to_buffer ; printf ds
-1   325							 ;=============================
-1   326	02B1  B9 4553					 mov cx, 4553h
-1   327	02B4  BA 000A					 mov dx, 10
-1   328	02B7  E8 FEFA					 call one_registr_to_buffer ; printf es
-1   329							 ;=============================
-1   330	02BA  B9 5353					 mov cx, 5353h
-1   331	02BD  BA 0008					 mov dx, 8
-1   332	02C0  E8 FEF1					 call one_registr_to_buffer ; printf ss
-1   333							 ;=============================
-1   334	02C3  B9 4353					 mov cx, 4353h
-1   335	02C6  BA 0006					 mov dx, 6
-1   336	02C9  E8 FEE8					 call one_registr_to_buffer ; printf cs
-1   337							 ;=============================
-1   338
-1   339	02CC  C7 87 0467r 4E20				 mov registr_buffer + bx, 4e20h
-1   340	02D2  83 C3 02					 add bx, 2
-1   341	02D5  C7 87 0467r 4EC0				 mov registr_buffer + bx, 4eC0h
-1   342	02DB  83 C3 02					 add bx, 2
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 7
+1   286	0255  E8 FF47					 call one_registr_to_buffer ; printf ax
+1   287							 ;=============================
+1   288	0258  B9 4258					 mov cx, 4258h
+1   289	025B  BA 001A					 mov dx, 26
+1   290	025E  E8 FF3E					 call one_registr_to_buffer ; printf bx
+1   291							 ;=============================
+1   292	0261  B9 4358					 mov cx, 4358h
+1   293	0264  BA 0018					 mov dx, 24
+1   294	0267  E8 FF35					 call one_registr_to_buffer ; printf cx
+1   295							 ;=============================
+1   296	026A  B9 4458					 mov cx, 4458h
+1   297	026D  BA 0016					 mov dx, 22
+1   298	0270  E8 FF2C					 call one_registr_to_buffer ; printf dx
+1   299							 ;=============================
+1   300	0273  B9 5349					 mov cx, 5349h
+1   301	0276  BA 0014					 mov dx, 20
+1   302	0279  E8 FF23					 call one_registr_to_buffer ; printf si
+1   303							 ;=============================
+1   304	027C  B9 4449					 mov cx, 4449h
+1   305	027F  BA 0012					 mov dx, 18
+1   306	0282  E8 FF1A					 call one_registr_to_buffer ; printf di
+1   307							 ;=============================
+1   308	0285  B9 4250					 mov cx, 4250h
+1   309	0288  BA 0010					 mov dx, 16
+1   310	028B  E8 FF11					 call one_registr_to_buffer ; printf bp
+1   311							 ;=============================
+1   312	028E  B9 5350					 mov cx, 5350h
+1   313	0291  BA 000E					 mov dx, 14
+1   314	0294  E8 FF08					 call one_registr_to_buffer ; printf sp
+1   315							 ;=============================
+1   316	0297  B9 4453					 mov cx, 4453h
+1   317	029A  BA 000C					 mov dx, 12
+1   318	029D  E8 FEFF					 call one_registr_to_buffer ; printf ds
+1   319							 ;=============================
+1   320	02A0  B9 4553					 mov cx, 4553h
+1   321	02A3  BA 000A					 mov dx, 10
+1   322	02A6  E8 FEF6					 call one_registr_to_buffer ; printf es
+1   323							 ;=============================
+1   324	02A9  B9 5353					 mov cx, 5353h
+1   325	02AC  BA 0008					 mov dx, 8
+1   326	02AF  E8 FEED					 call one_registr_to_buffer ; printf ss
+1   327							 ;=============================
+1   328	02B2  B9 4353					 mov cx, 4353h
+1   329	02B5  BA 0006					 mov dx, 6
+1   330	02B8  E8 FEE4					 call one_registr_to_buffer ; printf cs
+1   331							 ;=============================
+1   332
+1   333	02BB  C7 87 0472r 4E20				 mov registr_buffer + bx, 4e20h
+1   334	02C1  83 C3 02					 add bx, 2
+1   335	02C4  C7 87 0472r 4EC0				 mov registr_buffer + bx, 4eC0h
+1   336	02CA  83 C3 02					 add bx, 2
+1   337
+1   338	02CD  B9 000C					 mov cx, 12
+1   339	02D0  E8 FE82					 call print_vline
+1   340
+1   341	02D3  C7 87 0472r 4ED9				 mov registr_buffer + bx, 4eD9h
+1   342	02D9  83 C3 02					 add bx, 2
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 7
 rzdnt.asm
 
 
 
-1   343
-1   344	02DE  B9 000C					 mov cx, 12
-1   345	02E1  E8 FE86					 call print_vline
-1   346
-1   347	02E4  C7 87 0467r 4ED9				 mov registr_buffer + bx, 4eD9h
-1   348	02EA  83 C3 02					 add bx, 2
-1   349	02ED  C7 87 0467r 4E20				 mov registr_buffer + bx, 4e20h
-1   350
-1   351	02F3  33 DB					 xor bx, bx
-1   352	02F5  5D					 pop bp
-1   353	02F6  5A					 pop dx
-1   354	02F7  C3					 ret
-1   355	02F8			     registrs_to_buffer	 endp
-1   356				     ;===========================================
-1   357
-1   358				     ;===========================================
-1   359				     ; SCANF OLD VIDEO BUFFER
-1   360				     ;===========================================
-1   361				     ; Entry:	 BX = pointer to buffer
-1   362				     ; Exit:	 None
-1   363				     ; Expects:	 None
-1   364				     ; Destroys: AX, BX, DX, SI, DI, ES
-1   365				     ;===========================================
-1   366	02F8			     old_video_to_buffer proc
-1   367	02F8  53					 push bx
-1   368	02F9  BB B800					 mov bx, 0b800h
-1   369	02FC  8E C3					 mov es, bx
-1   370	02FE  5B					 pop bx
-1   371
-1   372	02FF  BE 0000					 mov si, 0
+1   343	02DC  C7 87 0472r 4E20				 mov registr_buffer + bx, 4e20h
+1   344
+1   345	02E2  1F 5A 59 5B 5D 58				 pop ds	dx cx bx bp ax
+1   346	02E8  C3					 ret
+1   347	02E9			     registrs_to_buffer	 endp
+1   348				     ;===========================================
+1   349
+1   350				     ;===========================================
+1   351				     ; SCANF OLD VIDEO BUFFER
+1   352				     ;===========================================
+1   353				     ; Entry:	 BX = pointer to buffer
+1   354				     ; Exit:	 None
+1   355				     ; Expects:	 None
+1   356				     ; Destroys: AX, BX, DX, SI, DI, ES
+1   357				     ;===========================================
+1   358	02E9			     old_video_to_buffer proc
+1   359	02E9  50 53 51 52 56 06	1E			 push ax bx cx dx si es	ds
+1   360
+1   361	02F0  53					 push bx
+1   362
+1   363	02F1  BB B800					 mov bx, 0b800h
+1   364	02F4  8E C3					 mov es, bx
+1   365	02F6  5B					 pop bx
+1   366
+1   367	02F7  BE 0000					 mov si, 0
+1   368
+1   369	02FA  B9 000E					 mov cx, 14
+1   370	02FD  BA 0010					 $$all_video_record: mov dx, 16
+1   371	0300  26: 8B 04							     $$string_video_record:  mov  ax,  es:[si]
+1   372	0303  89 07										     mov [bx], ax
 1   373
-1   374	0302  B9 000E					 mov cx, 14
-1   375	0305  BA 0010					 $$all_video_record: mov dx, 16
-1   376	0308  26: 8B 04							     $$string_video_record:  mov  ax,  es:[si]
-1   377	030B  89 07										     mov [bx], ax
-1   378
-1   379	030D  33 C0										     xor ax, ax
-1   380	030F  83 C3 02										     add bx, 2
-1   381	0312  83 C6 02										     add si, 2
-1   382
-1   383	0315  4A										     dec dx
-1   384	0316  83 FA 00										     cmp dx, 0
-1   385	0319  75 ED										     jne $$string_video_record
-1   386	031B  81 C6 0080						     add  si, 128
-1   387	031F  E2 E4							     loop $$all_video_record
+1   374	0305  33 C0										     xor ax, ax
+1   375	0307  83 C3 02										     add bx, 2
+1   376	030A  83 C6 02										     add si, 2
+1   377
+1   378	030D  4A										     dec dx
+1   379	030E  83 FA 00										     cmp dx, 0
+1   380	0311  75 ED										     jne $$string_video_record
+1   381	0313  81 C6 0080						     add  si, 128
+1   382	0317  E2 E4							     loop $$all_video_record
+1   383	0319  1F 07 5E 5A 59 5B	58			 pop ds	es si dx cx bx ax
+1   384	0320  C3					 ret
+1   385	0321			     old_video_to_buffer endp
+1   386				     ;===========================================
+1   387
 1   388
-1   389	0321  C3					 ret
-1   390	0322			     old_video_to_buffer endp
+1   389				     ;===========================================
+1   390				     ; PRINTF VIDEO BUFFER
 1   391				     ;===========================================
-1   392
-1   393
-1   394				     ;===========================================
-1   395				     ; PRINTF VIDEO BUFFER
+1   392				     ; Entry:	 BX = pointer to buffer
+1   393				     ; Exit:	 None
+1   394				     ; Expects:	 None
+1   395				     ; Destroys: BX, CX, DX, SI
 1   396				     ;===========================================
-1   397				     ; Entry:	 BX = pointer to buffer
-1   398				     ; Exit:	 None
-1   399				     ; Expects:	 None
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 8
+1   397	0321			     printf_video_buffer proc
+1   398	0321  53 51 52 56 06 1E				 push bx cx dx si es ds
+1   399	0327  53					 push bx
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 8
 rzdnt.asm
 
 
 
-1   400				     ; Destroys: BX, CX, DX, SI
-1   401				     ;===========================================
-1   402	0322			     printf_video_buffer proc
-1   403	0322  53					 push bx
-1   404	0323  BB B800					 mov bx, 0b800h
-1   405	0326  8E C3					 mov es, bx
-1   406	0328  5B					 pop bx
-1   407
-1   408	0329  BE 0000					 mov si, 0
-1   409	032C  B9 000E					 mov cx, 14
-1   410	032F  BA 0010					 $$all_printf_video: mov dx, 16
-1   411	0332  53							     $$string_printf_video:  push bx
-1   412	0333  8B 1F										     mov  bx,[bx]
-1   413	0335  26: 89 1C										     mov  es:[si], bx
-1   414	0338  5B										     pop  bx
-1   415
-1   416	0339  83 C3 02										     add  bx, 2
-1   417	033C  83 C6 02										     add  si, 2
-1   418
-1   419	033F  4A										     dec  dx
-1   420	0340  83 FA 00										     cmp  dx, 0
-1   421	0343  75 ED										     jne $$string_printf_video
-1   422	0345  81 C6 0080						     add si, 128
-1   423	0349  E2 E4							     loop $$all_printf_video
-1   424	034B  C3					 ret
-1   425	034C			     printf_video_buffer endp
+1   400	0328  BB B800					 mov bx, 0b800h
+1   401	032B  8E C3					 mov es, bx
+1   402	032D  5B					 pop bx
+1   403
+1   404	032E  BE 0000					 mov si, 0
+1   405	0331  B9 000E					 mov cx, 14
+1   406	0334  BA 0010					 $$all_printf_video: mov dx, 16
+1   407	0337  53							     $$string_printf_video:  push bx
+1   408	0338  8B 1F										     mov  bx,[bx]
+1   409	033A  26: 89 1C										     mov  es:[si], bx
+1   410	033D  5B										     pop  bx
+1   411
+1   412	033E  83 C3 02										     add  bx, 2
+1   413	0341  83 C6 02										     add  si, 2
+1   414
+1   415	0344  4A										     dec  dx
+1   416	0345  83 FA 00										     cmp  dx, 0
+1   417	0348  75 ED										     jne $$string_printf_video
+1   418	034A  81 C6 0080						     add si, 128
+1   419	034E  E2 E4							     loop $$all_printf_video
+1   420
+1   421	0350  1F 07 5E 5A 59 5B				 pop ds	es si dx cx bx
+1   422	0356  C3					 ret
+1   423	0357			     printf_video_buffer endp
+1   424				     ;===========================================
+1   425
 1   426				     ;===========================================
-1   427
+1   427				     ; CMP BUFFER AND VIDEO AND	UPDATE
 1   428				     ;===========================================
-1   429				     ; CMP BUFFER AND VIDEO AND	UPDATE
-1   430				     ;===========================================
-1   431				     ; Entry:	 BX = pointer to buffer	for cmp
-1   432				     ;		 DI = pointer to buffer	for write
-1   433				     ; Exit:	 None
-1   434				     ; Expects:	 None
-1   435				     ; Destroys: AX, BX, DX, SI, DI, ES
-1   436				     ;===========================================
-1   437	034C			     cmp_buffer	 proc
-1   438	034C  53				 push bx
-1   439	034D  BB B800				 mov  bx, 0b800h
-1   440	0350  8E C3				 mov  es, bx
-1   441	0352  5B				 pop  bx
-1   442
-1   443	0353  BE 0000				 mov si, 0
-1   444	0356  B9 000E				 mov cx, 14
-1   445	0359  BA 0010				 $$all_cmp:  mov dx, 16
-1   446	035C  26: 8B 04					     $$string_cmp:   mov ax, es:[si]
-1   447	035F  3B 07							     cmp ax, [bx]
-1   448	0361  75 03							     jne $$change
-1   449	0363  EB 03 90							     jmp $$not_change
-1   450
-1   451	0366  89 05					     $$change:	     mov [di], ax
-1   452
-1   453	0368  83 C7 02					     $$not_change:   add di, 2
-1   454	036B  83 C3 02							     add bx, 2
-1   455	036E  83 C6 02							     add si, 2
-1   456
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 9
+1   429				     ; Entry:	 BX = pointer to buffer	for cmp
+1   430				     ;		 DI = pointer to buffer	for write
+1   431				     ; Exit:	 None
+1   432				     ; Expects:	 None
+1   433				     ; Destroys: AX, BX, DX, SI, DI, ES
+1   434				     ;===========================================
+1   435	0357			     cmp_buffer	 proc
+1   436	0357  53 51 52 56 57 06	1E		 push bx cx dx si di es	ds
+1   437	035E  53				 push bx
+1   438	035F  BB B800				 mov  bx, 0b800h
+1   439	0362  8E C3				 mov  es, bx
+1   440	0364  5B				 pop  bx
+1   441
+1   442	0365  BE 0000				 mov si, 0
+1   443	0368  B9 000E				 mov cx, 14
+1   444	036B  BA 0010				 $$all_cmp:  mov dx, 16
+1   445	036E  26: 8B 04					     $$string_cmp:   mov ax, es:[si]
+1   446	0371  3B 07							     cmp ax, [bx]
+1   447	0373  75 03							     jne $$change
+1   448	0375  EB 03 90							     jmp $$not_change
+1   449
+1   450	0378  89 05					     $$change:	     mov [di], ax
+1   451
+1   452	037A  83 C7 02					     $$not_change:   add di, 2
+1   453	037D  83 C3 02							     add bx, 2
+1   454	0380  83 C6 02							     add si, 2
+1   455
+1   456	0383  33 C0							     xor ax, ax
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 9
 rzdnt.asm
 
 
 
-1   457	0371  33 C0							     xor ax, ax
-1   458	0373  4A							     dec dx
-1   459	0374  83 FA 00							     cmp dx, 0
-1   460	0377  75 E3							     jne $$string_cmp
-1   461	0379  81 C6 0080				     add si, 128
-1   462	037D  E2 DA					     loop $$all_cmp
-1   463	037F  C3				 ret
-1   464	0380			     cmp_buffer	 endp
-1   465				     ;===========================================
-    466
-    467				     ;===========================================
-    468				     ; NEW 09
-    469				     ;===========================================
-    470				     ; Entry:	  None
-    471				     ; Exit:	  None
-    472				     ; Expects:	  None
-    473				     ; Destroys:  None
-    474				     ;===========================================
-    475	0380			     new_09		     proc
-    476	0380  06 1E							     push es ds
-    477	0382  50					     push ax
-    478
-    479	0383  8A C1					 $$view:	     mov al, cl
-    480													     ;in  al, 60h
-    481	0385  3C 0D								     cmp al, 0dh	     ; al equaly scan code "+
-    482				     +="
-    483	0387  74 03								     je	 $$pressed	     ;
-    484	0389  EB 48 90								     jmp $$sleep_view	     ;
-    485
-    486	038C  2E: A0 07EBr				 $$pressed:	     mov al, cs:[mode]
-    487	0390  3C 00											     cmp al, 00h
-    488	0392  74 04											     je	 $$on_view
-    489	0394  3C 01											     cmp al, 01h
-    490	0396  74 18											     je	 $$off_view
-    491
-    492	0398  2E: C6 06	07EBr 01  +					     $$on_view:		     mov cs:[mode],	 01h ;-->;  +
-    493	      90		     if	 (mode == 0) then (mode	= 1)
-    494	039F  2E: C6 06	07EEr 01  +									     mov cs:[sleep_prg], 01h+
-    495	      90		     ;-->; and (sleep_prg = 1)
-    496	03A6  2E: C6 06	07ECr 01  +									     mov cs:[flaunch],	 01h+
-    497	      90		     ;-->; and (flaunch	  = 1)
-    498	03AD  EB 12 90							 jmp $$end_view
-    499
-    500	03B0  2E: C6 06	07EBr 00  +					     $$off_view:	     mov cs:[mode],   00h ;-->;	if  +
-    501	      90		     (mode == 1) then (mode = 0)
-    502	03B7  2E: C6 06	07EDr 00  +									     mov cs:[launch], 00h   +
-    503	      90		     ;-->; and (launch = 0)
-    504	03BE  EB 01 90											     jmp $$end_view
-    505
-    506	03C1						     $$end_view:
-    507
-    508	03C1  E4 61					     in	 al, 61h
-    509	03C3  0C 80					     or	 al, 80h
-    510	03C5  E6 61					     out 61h, al
-    511	03C7  24 7F					     and al, not 80h
-    512	03C9  E6 61					     out 61h, al
-    513
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 10
+1   457	0385  4A							     dec dx
+1   458	0386  83 FA 00							     cmp dx, 0
+1   459	0389  75 E3							     jne $$string_cmp
+1   460	038B  81 C6 0080				     add si, 128
+1   461	038F  E2 DA					     loop $$all_cmp
+1   462
+1   463	0391  1F 07 5F 5E 5A 59	5B		 pop ds	es di si dx cx bx
+1   464	0398  C3				 ret
+1   465	0399			     cmp_buffer	 endp
+1   466				     ;===========================================
+    467
+    468				     ;===========================================
+    469				     ; NEW 09
+    470				     ;===========================================
+    471				     ; Entry:	  None
+    472				     ; Exit:	  None
+    473				     ; Expects:	  None
+    474				     ; Destroys:  None
+    475				     ;===========================================
+    476	0399			     new_09		     proc
+    477	0399  06 1E							     push es ds
+    478	039B  50					     push ax
+    479
+    480	039C						 $$view:	     ;mov al, cl
+    481	039C  E4 60											     in	 al, 60h
+    482	039E  3C 0D								     cmp al, 0dh	     ; al equaly scan code "+
+    483				     +="
+    484	03A0  74 03								     je	 $$pressed	     ;
+    485	03A2  EB 48 90								     jmp $$sleep_view	     ;
+    486
+    487	03A5  2E: A0 07F6r				 $$pressed:	     mov al, cs:[mode]
+    488	03A9  3C 00											     cmp al, 00h
+    489	03AB  74 04											     je	 $$on_view
+    490	03AD  3C 01											     cmp al, 01h
+    491	03AF  74 18											     je	 $$off_view
+    492
+    493	03B1  2E: C6 06	07F6r 01  +					     $$on_view:		     mov cs:[mode],	 01h ;-->;  +
+    494	      90		     if	 (mode == 0) then (mode	= 1)
+    495	03B8  2E: C6 06	07F9r 01  +									     mov cs:[sleep_prg], 01h+
+    496	      90		     ;-->; and (sleep_prg = 1)
+    497	03BF  2E: C6 06	07F7r 01  +									     mov cs:[flaunch],	 01h+
+    498	      90		     ;-->; and (flaunch	  = 1)
+    499	03C6  EB 12 90							 jmp $$end_view
+    500
+    501	03C9  2E: C6 06	07F6r 00  +					     $$off_view:	     mov cs:[mode],   00h ;-->;	if  +
+    502	      90		     (mode == 1) then (mode = 0)
+    503	03D0  2E: C6 06	07F8r 00  +									     mov cs:[launch], 00h   +
+    504	      90		     ;-->; and (launch = 0)
+    505	03D7  EB 01 90											     jmp $$end_view
+    506
+    507	03DA						     $$end_view:
+    508
+    509	03DA  E4 61					     in	 al, 61h
+    510	03DC  0C 80					     or	 al, 80h
+    511	03DE  E6 61					     out 61h, al
+    512	03E0  24 7F					     and al, not 80h
+    513	03E2  E6 61					     out 61h, al
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 10
 rzdnt.asm
 
 
 
-    514	03CB  B0 20					     mov al, 20h
-    515	03CD  E6 20					     out 20h, al
-    516
-    517	03CF  58					     pop ax
-    518	03D0  1F 07					 pop ds	es
-    519	03D2  CF					     iret
-    520
-    521	03D3  58		     $$sleep_view:	     pop ax
-    522	03D4  1F 07							     pop ds es
-    523
-    524	03D6  EA					 db 0eah
-    525	03D7  0000				old09ofs dw 0
-    526	03D9  0000				old09seg dw 0
-    527
-    528	03DB			     new_09		     endp
-    529				     ;===========================================
-    530
+    514
+    515	03E4  B0 20					     mov al, 20h
+    516	03E6  E6 20					     out 20h, al
+    517
+    518	03E8  58					     pop ax
+    519	03E9  1F 07					 pop ds	es
+    520	03EB  CF					     iret
+    521
+    522	03EC  58		     $$sleep_view:	     pop ax
+    523	03ED  1F 07							     pop ds es
+    524
+    525	03EF  EA					 db 0eah	     ; jmp far
+    526	03F0  0000				old09ofs dw 0
+    527	03F2  0000				old09seg dw 0
+    528
+    529	03F4			     new_09		     endp
+    530				     ;===========================================
     531
-    532				     ;===========================================
-    533				     ; NEW 08
-    534				     ;===========================================
-    535				     ; Entry:	  None
-    536				     ; Exit:	  None
-    537				     ; Expects:	  None
-    538				     ; Destroys:  None
-    539				     ;===========================================
-    540	03DB			     new_08		     proc
-    541	03DB  9C						     pushf     ; push flags
-    542	03DC  9A						     db	09ah   ; call far
-    543	03DD  0000			    old08ofs dw	0
-    544	03DF  0000			    old08seg dw	0
-    545
-    546	03E1  50 53 51 52					     push ax bx	cx dx
-    547	03E5  56 57				     push si di
-    548	03E7  55 54				     push bp sp
-    549	03E9  1E 06 16 0E			     push ds es	ss cs
-    550
-    551	03ED  2E: A0 07EBr					     mov al, cs:[mode]
-    552	03F1  3C 01						     cmp al, 01h
-    553	03F3  74 03						     je	 $$update_registers
-    554	03F5  EB 37 90						     jmp $$sleep_update
-    555
-    556								     ;==============================================
-    557	03F8  2E: A0 07EDr					     $$update_registers:     mov al, cs:[launch]
-    558	03FC  3C 00											     cmp al, 00h
-    559	03FE  74 18											     je	 $$save_old_video
-    560	0400  EB 01 90											     jmp $$draw_registers
-    561
-    562	0403  BB 0467r						     $$draw_registers:	     lea  bx, cs:[registr_buffer]
-    563	0406  BF 0629r											     lea  di, cs:	    +
-    564				     [old_screen_buffer]
-    565	0409  E8 FF40											     call cmp_buffer
-    566	040C  E8 FE1F											     call registrs_to_buffer
-    567	040F  BB 0467r							 lea  bx, cs:[registr_buffer]
-    568	0412  E8 FF0D											     call printf_video_buffer
-    569	0415  EB 3A 90											     jmp  $$end_time
-    570
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 11
+    532
+    533				     ;===========================================
+    534				     ; NEW 08
+    535				     ;===========================================
+    536				     ; Entry:	  None
+    537				     ; Exit:	  None
+    538				     ; Expects:	  None
+    539				     ; Destroys:  None
+    540				     ;===========================================
+    541	03F4			     new_08		     proc
+    542	03F4  9C						     pushf     ; push flags
+    543	03F5  9A						     db	09ah   ; call far
+    544	03F6  0000			    old08ofs dw	0
+    545	03F8  0000			    old08seg dw	0
+    546
+    547	03FA  50 53 51 52					     push ax bx	cx dx
+    548	03FE  56 57				     push si di
+    549	0400  55 54				     push bp sp
+    550	0402  1E 06 16 0E			     push ds es	ss cs
+    551
+    552	0406  2E: A0 07F6r					     mov al, cs:[mode]
+    553	040A  3C 01						     cmp al, 01h
+    554	040C  74 03						     je	 $$update_registers
+    555	040E  EB 30 90						     jmp $$sleep_update
+    556
+    557								     ;==============================================
+    558	0411  2E: A0 07F8r					     $$update_registers:     mov al, cs:[launch]
+    559	0415  3C 00											     cmp al, 00h
+    560	0417  74 18											     je	 $$save_old_video
+    561	0419  EB 01 90											     jmp $$draw_registers
+    562
+    563	041C  BB 0472r						     $$draw_registers:	     lea  bx, cs:[registr_buffer]
+    564	041F  BF 0634r											     lea  di, cs:	    +
+    565				     [old_screen_buffer]
+    566	0422  E8 FF32											     call cmp_buffer
+    567	0425  E8 FDF1											     call registrs_to_buffer
+    568	0428  BB 0472r							 lea  bx, cs:[registr_buffer]
+    569	042B  E8 FEF3											     call printf_video_buffer
+    570	042E  EB 33 90											     jmp  $$end_time
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 11
 rzdnt.asm
 
 
 
-    571	0418  B4 09						     $$save_old_video:	 mov ah, 09h
-    572	041A  BA 088Dr										     mov dx, offset cs:[help1]
-    573	041D  CD 21										     int 21h
-    574	041F  BB 0629r											     lea bx, cs:	    +
-    575				     [old_screen_buffer]
-    576	0422  E8 FED3											     call old_video_to_buffer
-    577	0425  2E: C6 06	07EDr 01  +									     mov  cs:[launch], 01h
-    578	      90
-    579	042C  EB D5											     jmp  $$draw_registers
-    580								     ;==============================================
-    581	042E  2E: A0 07ECr					     $$sleep_update:	     mov al, cs:[flaunch]
-    582	0432  3C 00											     cmp al, 00h
-    583	0434  74 1B											     je	 $$end_time
-    584
-    585	0436  2E: A0 07EEr										     mov al, cs:[sleep_prg]
-    586	043A  3C 00											     cmp al, 00h
-    587	043C  75 03											     jne $$draw_old_video
-    588	043E  EB 11 90											     jmp $$end_time
-    589
-    590	0441  2E: C6 06	07EEr 00  +				     $$draw_old_video:	     mov  cs:[sleep_prg], 00h	     ;-->;  +
-    591	      90		     if	(sleep_prg == 0) then (sleep_prg = 1)
-    592	0448  BB 0629r											     lea  bx, cs:	    +
-    593				     [old_screen_buffer]
-    594	044B  E8 FED4											     call printf_video_buffer
-    595	044E  EB 01 90											     jmp  $$end_time
-    596								     ;==============================================
-    597	0451  B4 09						     $$end_time: mov ah, 09h
-    598	0453  BA 088Dr								     mov dx, offset cs:[help1]
-    599	0456  CD 21								     int 21h
-    600
-    601	0458  83 C4 02						     add sp, 2
+    571
+    572	0431  BB 0634r						     $$save_old_video:	 lea bx, cs:[old_screen_buffer]
+    573	0434  E8 FEB2											     call old_video_to_buffer
+    574	0437  2E: C6 06	07F8r 01  +									     mov  cs:[launch], 01h
+    575	      90
+    576	043E  EB DC											     jmp  $$draw_registers
+    577								     ;==============================================
+    578	0440  2E: A0 07F7r					     $$sleep_update:	     mov al, cs:[flaunch]
+    579	0444  3C 00											     cmp al, 00h
+    580	0446  74 1B											     je	 $$end_time
+    581
+    582	0448  2E: A0 07F9r										     mov al, cs:[sleep_prg]
+    583	044C  3C 00											     cmp al, 00h
+    584	044E  75 03											     jne $$draw_old_video
+    585	0450  EB 11 90											     jmp $$end_time
+    586
+    587	0453  2E: C6 06	07F9r 00  +				     $$draw_old_video:	     mov  cs:[sleep_prg], 00h	     ;-->;  +
+    588	      90		     if	(sleep_prg == 0) then (sleep_prg = 1)
+    589	045A  BB 0634r											     lea  bx, cs:	    +
+    590				     [old_screen_buffer]
+    591	045D  E8 FEC1											     call printf_video_buffer
+    592	0460  EB 01 90											     jmp  $$end_time
+    593								     ;==============================================
+    594	0463							     $$end_time:
+    595
+    596	0463  83 C4 02						     add sp, 2
+    597
+    598	0466  17 07 1F						     pop ss es ds
+    599	0469  5C 5D				     pop sp bp
+    600	046B  5F 5E				     pop di si
+    601	046D  5A 59 5B 58			     pop dx cx bx ax
     602
-    603	045B  17 07 1F						     pop ss es ds
-    604	045E  5C 5D				     pop sp bp
-    605	0460  5F 5E				     pop di si
-    606	0462  5A 59 5B 58			     pop dx cx bx ax
-    607
-    608	0466  CF				     iret
-    609	0467			     new_08		     endp
-    610				     ;===========================================
-    611	0467  E1*(0000)		     registr_buffer    dw 225 dup (0)
-    612	0629  E1*(0000)		     old_screen_buffer dw 225 dup (0)
-    613
-    614	07EB  00		     mode	     db	00h ; mode	== 0 --> draw registers	off (pressed)		     ; mode +
-    615				     ==	1 --> draw registers on	(pressed)	  ;
-    616	07EC  00		     flaunch	     db	00h ; flaunch	== 0 --> there was no first launch		     ;	    +
-    617				     flaunch   == 1 -->	there was first	launch		    ;
-    618	07ED  00		     launch	 db 00h	; launch    == 0 --> draw registers off			 ; launch    ==	1   +
-    619				     --> draw registers	on					 ;
-    620	07EE  00		     sleep_prg	     db	00h ; sleep_prg	== 0 --> drawing in video memory is disabled ; sleep_prg == +
-    621				     1 --> draw	registers was on			       ;
-    622
-    623
-    624	07EF  1D*(20) C9 CD 12*	  +  rezident_active db	29 dup (20h), 0C9h, 0CDh,     18 dup (0CDh),	0CDh, 0BBh, 0dh, 0ah
-    625	      (CD) CD BB 0D 0A
-    626	0824  1D*(20) BA 20 52 65 +		     db	29 dup (20h), 0BAh, 020h, "Resident activated",	020h, 0BAh, 0dh, 0ah
-    627	      73 69 64 65 6E 74	20+
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 12
+    603	0471  CF				     iret
+    604	0472			     new_08		     endp
+    605				     ;===========================================
+    606	0472  E1*(0000)		     registr_buffer    dw 225 dup (0)
+    607	0634  E1*(0000)		     old_screen_buffer dw 225 dup (0)
+    608
+    609	07F6  00		     mode	     db	00h ; mode	== 0 --> draw registers	off (pressed)		     ; mode +
+    610				     ==	1 --> draw registers on	(pressed)	  ;
+    611	07F7  00		     flaunch	     db	00h ; flaunch	== 0 --> there was no first launch		     ;	    +
+    612				     flaunch   == 1 -->	there was first	launch		    ;
+    613	07F8  00		     launch	 db 00h	; launch    == 0 --> draw registers off			 ; launch    ==	1   +
+    614				     --> draw registers	on					 ;
+    615	07F9  00		     sleep_prg	     db	00h ; sleep_prg	== 0 --> drawing in video memory is disabled ; sleep_prg == +
+    616				     1 --> draw	registers was on			       ;
+    617
+    618
+    619	07FA  1D*(20) C9 CD 12*	  +  rezident_active db	29 dup (20h), 0C9h, 0CDh,     18 dup (0CDh),	0CDh, 0BBh, 0dh, 0ah
+    620	      (CD) CD BB 0D 0A
+    621	082F  1D*(20) BA 20 52 65 +		     db	29 dup (20h), 0BAh, 020h, "Resident activated",	020h, 0BAh, 0dh, 0ah
+    622	      73 69 64 65 6E 74	20+
+    623	      61 63 74 69 76 61	74+
+    624	      65 64 20 BA 0D 0A
+    625	0864  1D*(20) C8 CD 12*	  +			     db	29 dup (20h), 0C8h, 0CDh,     18 dup (0CDh),	0CDh, 0BCh, '$'
+    626	      (CD) CD BC 24
+    627
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 12
 rzdnt.asm
 
 
 
-    628	      61 63 74 69 76 61	74+
-    629	      65 64 20 BA 0D 0A
-    630	0859  1D*(20) C8 CD 12*	  +			     db	29 dup (20h), 0C8h, 0CDh,     18 dup (0CDh),	0CDh, 0BCh, '$'
-    631	      (CD) CD BC 24
-    632
-    633	088D  20 20 20 20 20 20	20+  help1 db "			1111111111", 0dh, 0ah, '$'
-    634	      20 20 20 20 20 20	20+
-    635	      20 20 20 31 31 31	31+
-    636	      31 31 31 31 31 31	0D+
-    637	      0A 24
-    638
-    639	08AB  20 20 20 20 20 20	20+  help2 db "			2222222222", 0dh, 0ah, '$'
-    640	      20 20 20 20 20 20	20+
-    641	      20 20 20 32 32 32	32+
-    642	      32 32 32 32 32 32	0D+
-    643	      0A 24
-    644
-    645	08C9  20 20 20 20 20 20	20+  help3 db "			3333333333", 0dh, 0ah, '$'
-    646	      20 20 20 20 20 20	20+
-    647	      20 20 20 33 33 33	33+
-    648	      33 33 33 33 33 33	0D+
-    649	      0A 24
-    650
-    651	08E7  20 20 20 20 20 20	20+  help4 db "			4444444444", 0dh, 0ah, '$'
-    652	      20 20 20 20 20 20	20+
-    653	      20 20 20 34 34 34	34+
-    654	      34 34 34 34 34 34	0D+
-    655	      0A 24
-    656
-    657	0905			     EOP: end Start
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 13
+    628	0898			     EOP: end Start
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 13
 Symbol Table
 
 
@@ -723,34 +694,34 @@ Symbol Table
 
 Symbol Name			  Type	 Value
 
-$$ALL_CMP			  Near	 DGROUP:0359
-$$ALL_PRINTF_VIDEO		  Near	 DGROUP:032F
-$$ALL_VIDEO_RECORD		  Near	 DGROUP:0305
-$$CHANGE			  Near	 DGROUP:0366
-$$DRAW_LINE			  Near	 DGROUP:016A
-$$DRAW_OLD_VIDEO		  Near	 DGROUP:0441
-$$DRAW_REGISTERS		  Near	 DGROUP:0403
-$$ELSE_AX_JLE_09H		  Near	 DGROUP:0190
-$$END_IF_AX_JLE_09H		  Near	 DGROUP:0196
-$$END_TIME			  Near	 DGROUP:0451
-$$END_VIEW			  Near	 DGROUP:03C1
-$$IF_AX_JLE_09H			  Near	 DGROUP:018B
-$$NOT_CHANGE			  Near	 DGROUP:0368
-$$OFF_VIEW			  Near	 DGROUP:03B0
-$$ON_VIEW			  Near	 DGROUP:0398
-$$PRESSED			  Near	 DGROUP:038C
-$$PRINT_VALUE			  Near	 DGROUP:0181
-$$SAVE_OLD_VIDEO		  Near	 DGROUP:0418
-$$SLEEP_UPDATE			  Near	 DGROUP:042E
-$$SLEEP_VIEW			  Near	 DGROUP:03D3
-$$STRING_CMP			  Near	 DGROUP:035C
-$$STRING_PRINTF_VIDEO		  Near	 DGROUP:0332
-$$STRING_VIDEO_RECORD		  Near	 DGROUP:0308
-$$UPDATE_REGISTERS		  Near	 DGROUP:03F8
-$$VIEW				  Near	 DGROUP:0383
-??DATE				  Text	 "03/25/23"
+$$ALL_CMP			  Near	 DGROUP:036B
+$$ALL_PRINTF_VIDEO		  Near	 DGROUP:0334
+$$ALL_VIDEO_RECORD		  Near	 DGROUP:02FD
+$$CHANGE			  Near	 DGROUP:0378
+$$DRAW_LINE			  Near	 DGROUP:0155
+$$DRAW_OLD_VIDEO		  Near	 DGROUP:0453
+$$DRAW_REGISTERS		  Near	 DGROUP:041C
+$$ELSE_AX_JLE_09H		  Near	 DGROUP:017B
+$$END_IF_AX_JLE_09H		  Near	 DGROUP:0181
+$$END_TIME			  Near	 DGROUP:0463
+$$END_VIEW			  Near	 DGROUP:03DA
+$$IF_AX_JLE_09H			  Near	 DGROUP:0176
+$$NOT_CHANGE			  Near	 DGROUP:037A
+$$OFF_VIEW			  Near	 DGROUP:03C9
+$$ON_VIEW			  Near	 DGROUP:03B1
+$$PRESSED			  Near	 DGROUP:03A5
+$$PRINT_VALUE			  Near	 DGROUP:016C
+$$SAVE_OLD_VIDEO		  Near	 DGROUP:0431
+$$SLEEP_UPDATE			  Near	 DGROUP:0440
+$$SLEEP_VIEW			  Near	 DGROUP:03EC
+$$STRING_CMP			  Near	 DGROUP:036E
+$$STRING_PRINTF_VIDEO		  Near	 DGROUP:0337
+$$STRING_VIDEO_RECORD		  Near	 DGROUP:0300
+$$UPDATE_REGISTERS		  Near	 DGROUP:0411
+$$VIEW				  Near	 DGROUP:039C
+??DATE				  Text	 "03/26/23"
 ??FILENAME			  Text	 "rzdnt	  "
-??TIME				  Text	 "19:09:46"
+??TIME				  Text	 "15:43:01"
 ??VERSION			  Number 040A
 @32BIT				  Text	 0
 @CODE				  Text	 DGROUP
@@ -764,36 +735,32 @@ $$VIEW				  Near	 DGROUP:0383
 @MODEL				  Text	 1
 @STACK				  Text	 DGROUP
 @WORDSIZE			  Text	 2
-CMP_BUFFER			  Near	 DGROUP:034C
-EOP				  Near	 DGROUP:0905
-FLAUNCH				  Byte	 DGROUP:07EC
-HELP1				  Byte	 DGROUP:088D
-HELP2				  Byte	 DGROUP:08AB
-HELP3				  Byte	 DGROUP:08C9
-HELP4				  Byte	 DGROUP:08E7
-HEX_PRINT			  Near	 DGROUP:0176
-LAUNCH				  Byte	 DGROUP:07ED
-MODE				  Byte	 DGROUP:07EB
-NEW_08				  Near	 DGROUP:03DB
-NEW_09				  Near	 DGROUP:0380
-OLD08OFS			  Word	 DGROUP:03DD
-Turbo Assembler	 Version 4.1	    03/25/23 19:09:47	    Page 14
+CMP_BUFFER			  Near	 DGROUP:0357
+EOP				  Near	 DGROUP:0898
+FLAUNCH				  Byte	 DGROUP:07F7
+HEX_PRINT			  Near	 DGROUP:0161
+LAUNCH				  Byte	 DGROUP:07F8
+MODE				  Byte	 DGROUP:07F6
+NEW_08				  Near	 DGROUP:03F4
+NEW_09				  Near	 DGROUP:0399
+OLD08OFS			  Word	 DGROUP:03F6
+OLD08SEG			  Word	 DGROUP:03F8
+OLD09OFS			  Word	 DGROUP:03F0
+OLD09SEG			  Word	 DGROUP:03F2
+OLD_SCREEN_BUFFER		  Word	 DGROUP:0634
+Turbo Assembler	 Version 4.1	    03/26/23 15:43:01	    Page 14
 Symbol Table
 
 
 
-OLD08SEG			  Word	 DGROUP:03DF
-OLD09OFS			  Word	 DGROUP:03D7
-OLD09SEG			  Word	 DGROUP:03D9
-OLD_SCREEN_BUFFER		  Word	 DGROUP:0629
-OLD_VIDEO_TO_BUFFER		  Near	 DGROUP:02F8
-ONE_REGISTR_TO_BUFFER		  Near	 DGROUP:01B4
-PRINTF_VIDEO_BUFFER		  Near	 DGROUP:0322
-PRINT_VLINE			  Near	 DGROUP:016A
-REGISTRS_TO_BUFFER		  Near	 DGROUP:022E
-REGISTR_BUFFER			  Word	 DGROUP:0467
-REZIDENT_ACTIVE			  Byte	 DGROUP:07EF
-SLEEP_PRG			  Byte	 DGROUP:07EE
+OLD_VIDEO_TO_BUFFER		  Near	 DGROUP:02E9
+ONE_REGISTR_TO_BUFFER		  Near	 DGROUP:019F
+PRINTF_VIDEO_BUFFER		  Near	 DGROUP:0321
+PRINT_VLINE			  Near	 DGROUP:0155
+REGISTRS_TO_BUFFER		  Near	 DGROUP:0219
+REGISTR_BUFFER			  Word	 DGROUP:0472
+REZIDENT_ACTIVE			  Byte	 DGROUP:07FA
+SLEEP_PRG			  Byte	 DGROUP:07F9
 START				  Near	 DGROUP:0100
 
 Macro Name
@@ -806,5 +773,5 @@ Groups & Segments		  Bit Size Align  Combine Class
 
 DGROUP				  Group
   _DATA				  16  0000 Word	  Public  DATA
-  _TEXT				  16  0905 Word	  Public  CODE
+  _TEXT				  16  0898 Word	  Public  CODE
 

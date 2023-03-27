@@ -44,10 +44,11 @@ one_registr_to_buffer   endp
 ; Expects:   
 ; Destroys:  
 ;=========================================== 
-registrs_to_buffer  proc  
-                    push dx           
-                    push bp               
+registrs_to_buffer  proc 
+                    push ax
+                    push bp 
                     mov  bp, sp
+                    push bx cx dx ds             
 
                     xor bx, bx
 
@@ -127,9 +128,7 @@ registrs_to_buffer  proc
                     add bx, 2
                     mov registr_buffer + bx, 4e20h
               
-                    xor bx, bx
-                    pop bp   
-                    pop dx
+                    pop ds dx cx bx bp ax
                     ret
 registrs_to_buffer  endp
 ;=========================================== 
@@ -143,7 +142,10 @@ registrs_to_buffer  endp
 ; Destroys: AX, BX, DX, SI, DI, ES
 ;=========================================== 
 old_video_to_buffer proc
+                    push ax bx cx dx si es ds
+
                     push bx
+                    
                     mov bx, 0b800h
                     mov es, bx
                     pop bx
@@ -164,7 +166,7 @@ old_video_to_buffer proc
                                                                 jne $$string_video_record
                                         add  si, 128
                                         loop $$all_video_record
-            
+                    pop ds es si dx cx bx ax
                     ret
 old_video_to_buffer endp
 ;=========================================== 
@@ -179,6 +181,7 @@ old_video_to_buffer endp
 ; Destroys: BX, CX, DX, SI
 ;=========================================== 
 printf_video_buffer proc
+                    push bx cx dx si es ds
                     push bx
                     mov bx, 0b800h
                     mov es, bx
@@ -200,6 +203,8 @@ printf_video_buffer proc
                                                                 jne $$string_printf_video
                                         add si, 128
                                         loop $$all_printf_video
+
+                    pop ds es si dx cx bx
                     ret
 printf_video_buffer endp
 ;=========================================== 
@@ -214,6 +219,7 @@ printf_video_buffer endp
 ; Destroys: AX, BX, DX, SI, DI, ES
 ;=========================================== 
 cmp_buffer  proc
+            push bx cx dx si di es ds
             push bx
             mov  bx, 0b800h
             mov  es, bx
@@ -239,6 +245,8 @@ cmp_buffer  proc
                                         jne $$string_cmp
                         add si, 128
                         loop $$all_cmp
+
+            pop ds es di si dx cx bx
             ret
 cmp_buffer  endp
 ;===========================================

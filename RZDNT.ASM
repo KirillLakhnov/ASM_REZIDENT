@@ -95,16 +95,9 @@ Start: 	sti
        	mov es:[bx + 2], ax
        	sti
 
-		;mov cx, offset registr_buffer
-		;mov cx, offset old_screen_buffer
-		;mov cx, offset mode
-
-		;mov cl, 0dh
-		;int 9h
-		;int 8h
-		;mov cl, 21h
-		;int 9h
-		;int 8h
+		;mov ax, offset registr_buffer
+		;mov ax, offset old_video_to_buffer
+		;mov ax, offset 
 
        	mov ah, 09h
 	    mov dx, offset rezident_active
@@ -139,46 +132,46 @@ print_vline  endp
 ;            BX = coordinate start printing
 ; Destroys:  None
 ;=========================================== 
-HEX_print proc
-          push si cx
+HEX_print 	proc
+          	push si cx
           
-          mov si, 0Fh
+          	mov si, 0Fh
              
-          add bx, 6
-          mov cx, 4
+          	add bx, 6
+          	mov cx, 4
           
-          $$print_value: push ax 
+          	$$print_value: 	push ax 
           
-                         and ax, si
+                         	and ax, si
                          
-                         cmp al, 09h
-                         jle $$if_ax_jle_09h
-                         jmp $$else_ax_jle_09h
+                         	cmp al, 09h
+                         	jle $$if_ax_jle_09h
+                         	jmp $$else_ax_jle_09h
                          
-                         $$if_ax_jle_09h:     add al, 30h
-                                              jmp $$end_if_ax_jle_09h
+                         	$$if_ax_jle_09h:    add al, 30h
+                                              	jmp $$end_if_ax_jle_09h
                                               
-                         $$else_ax_jle_09h:   add ax, 37h
-                                              jmp $$end_if_ax_jle_09h
+                         	$$else_ax_jle_09h:   add ax, 37h
+                                              	jmp $$end_if_ax_jle_09h
                                               
-                         $$end_if_ax_jle_09h:
+                         	$$end_if_ax_jle_09h:
                          
-                         mov ah, 4eh
-                         mov registr_buffer + bx, ax
-                         sub bx, 2
+                         	mov ah, 4eh
+                         	mov registr_buffer + bx, ax
+                         	sub bx, 2
                          
-                         pop ax
-                         shr ax, 4
-                         loop $$print_value
+                         	pop ax
+                         	shr ax, 4
+                         	loop $$print_value
           
-		  add bx, 10
-          mov registr_buffer + bx, 4e68h
-          add bx, 2
+		  	add bx, 10
+          	mov registr_buffer + bx, 4e68h
+          	add bx, 2
           
-          pop cx si
+          	pop cx si
           
-          ret
-HEX_print endp
+          	ret
+HEX_print 	endp
 ;===========================================
 
 include tests.asm
@@ -234,7 +227,7 @@ new_09             	proc
 $$sleep_view:      	pop ax
 					pop ds es
 
-                    db 0eah
+                    db 0eah		; jmp far
            old09ofs dw 0
            old09seg dw 0
 
@@ -250,7 +243,7 @@ new_09           	endp
 ; Expects:   None
 ; Destroys:  None
 ;===========================================  
-new_08 			proc 
+new_08 			proc
 				pushf     ; push flags
 				db 09ah   ; call far
        old08ofs dw 0
@@ -280,10 +273,7 @@ new_08 			proc
 									call printf_video_buffer
 									jmp  $$end_time
 
-				$$save_old_video:   mov ah, 09h
-	    							mov dx, offset cs:[help1]
-	    							int 21h
-									lea bx, cs:[old_screen_buffer]
+				$$save_old_video:   lea bx, cs:[old_screen_buffer]
 									call old_video_to_buffer
 									mov  cs:[launch], 01h
 									jmp  $$draw_registers
